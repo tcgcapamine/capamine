@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  summary     String?
+  category    String    // "pokemon" | "onepiece" | "general"
+  source      String?
+  sourceUrl   String?
+  imageUrl    String?
+  tags        String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CardPrice {
+  id         String   @id @default(cuid())
+  cardName   String
+  setName    String
+  category   String   // "pokemon" | "onepiece"
+  rarity     String?
+  price      Int
+  prevPrice  Int?
+  currency   String   @default("KRW")
+  source     String?
+  recordedAt DateTime @default(now())
+}
+
+model ReleaseEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // "pokemon" | "onepiece" | "event"
+  releaseDate DateTime
+  imageUrl    String?
+  isJapan     Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+}
+
+model DeckRecipe {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // "pokemon" | "onepiece"
+  cards       String
+  author      String?
+  tournament  String?
+  result      String?
+  imageUrl    String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
