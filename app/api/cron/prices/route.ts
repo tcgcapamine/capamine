@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { scrapePrices } from "@/lib/prices/scrape-prices";
+import { fetchNaverPrices } from "@/lib/prices/naver-prices";
 
-// Vercel Cron: 매일 오전 6시 (UTC) 실행
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const items = await scrapePrices();
+    const items = await fetchNaverPrices();
     if (items.length === 0) {
       return NextResponse.json({ ok: true, message: "수집된 시세 없음" });
     }
@@ -18,28 +19,35 @@ export async function GET(req: NextRequest) {
     let updated = 0;
     for (const item of items) {
       const existing = await prisma.cardPrice.findFirst({
-        where: { cardName: item.cardName, category: item.category },
+        where: { cardName: { contains: item.cardName.slice(0, 20) }, category: item.category },
       });
 
       if (existing) {
-        await prisma.cardPrice.update({
-          where: { id: existing.id },
-          data: { prevPrice: existing.price, price: item.price, recordedAt: new Date() },
-        });
+        if (existing.price !== item.price) {
+          await prisma.cardPrice.update({
+            where: { id: existing.id },
+            data: { prevPrice: existing.price, price: item.price, recordedAt: new Date() },
+          });
+          updated++;
+        }
       } else {
         await prisma.cardPrice.create({
           data: {
-            cardName: item.cardName, setName: item.setName,
-            category: item.category, rarity: item.rarity,
+            cardName: item.cardName,
+            setName: item.setName,
+            category: item.category,
+            rarity: item.rarity,
             price: item.price,
+            source: `네이버쇼핑 · ${item.mallName}`,
           },
         });
+        updated++;
       }
-      updated++;
     }
 
-    return NextResponse.json({ ok: true, updated, total: items.length });
+    return NextResponse.json({ ok: true, fetched: items.length, updated, timestamp: new Date().toISOString() });
   } catch (err) {
+    console.error("[cron/prices]", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
