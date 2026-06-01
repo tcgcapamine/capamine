@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectAll } from "@/lib/collect";
 
-// Vercel Cron Job — 6시간마다 자동 수집
-// vercel.json: { "crons": [{ "path": "/api/cron/collect", "schedule": "0 */6 * * *" }] }
+// 번역 없이 빠르게 수집만 (Vercel 10초 제한 대응)
+// 번역은 /api/cron/translate 에서 별도 처리
 export async function GET(req: NextRequest) {
-  // Vercel Cron 인증 헤더 검증
   const authHeader = req.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    console.log("[cron/collect] 자동 수집 시작:", new Date().toISOString());
+    // NO_TRANSLATE=true 로 번역 없이 수집
+    process.env.NO_TRANSLATE = "true";
     const summary = await collectAll();
-    console.log("[cron/collect] 완료:", summary);
-    return NextResponse.json({ ok: true, timestamp: new Date().toISOString(), ...summary });
+    process.env.NO_TRANSLATE = undefined;
+    return NextResponse.json({ ok: true, timestamp: new Date().toISOString(), saved: summary.totalSaved });
   } catch (err) {
-    console.error("[cron/collect] 오류:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
