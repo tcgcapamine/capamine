@@ -162,15 +162,11 @@ function NewsSection({ articles, accent, label, href }: { articles: Article[]; a
 
         {/* BIG CARD — 왼쪽 2행 차지 */}
         <Link href={`/articles/${big.id}`} className="card-lift"
-          style={{ textDecoration: "none", gridRow: "1 / 3", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", overflow: "hidden", background: big.imageUrl ? "none" : `linear-gradient(160deg, ${accent}12 0%, ${C.s1} 60%)`, padding: "28px 24px", minHeight: "280px" }}>
-          {/* 배경 이미지 */}
-          {big.imageUrl && (
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${big.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }}>
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)" }} />
-            </div>
-          )}
+          style={{ textDecoration: "none", gridRow: "1 / 3", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", overflow: "hidden", background: `linear-gradient(160deg, ${accent}12 0%, ${C.s1} 60%)`, padding: "28px 24px", minHeight: "280px" }}>
           {/* Ghost 숫자 */}
-          {!big.imageUrl && <span className="f-display" style={{ position: "absolute", top: "12px", right: "12px", fontSize: "120px", fontWeight: 900, color: accent, opacity: 0.05, lineHeight: 1, userSelect: "none" }}>01</span>}
+          <span className="f-display" style={{ position: "absolute", top: "12px", right: "12px", fontSize: "120px", fontWeight: 900, color: accent, opacity: 0.05, lineHeight: 1, userSelect: "none" }}>
+            01
+          </span>
           <span style={{ display: "inline-block", width: "100%", height: "2px", background: accent, marginBottom: "16px" }} />
           <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "12px" }}>
             <span className="f-display" style={{ fontSize: "9px", fontWeight: 800, color: accent, letterSpacing: "0.16em" }}>FEATURED</span>
