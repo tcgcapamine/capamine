@@ -32,7 +32,7 @@ export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
     throw new Error(`${src.name}: ${msg}`);
   });
 
-  return (feed.items ?? []).slice(0, 10).map((item) => {
+  return (feed.items ?? []).slice(0, 30).map((item) => {
     const raw = item as unknown as Record<string, unknown>;
     const content =
       (raw.contentSnippet as string) ??

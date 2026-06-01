@@ -30,18 +30,20 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   let summary = "";
   let content = item.content;
   let tags = "";
+  let publishedAt = item.publishedAt;
 
-  // 한국어가 아니면 Claude로 번역
+  // 한국어가 아니면 Claude로 번역 + 날짜 파싱
   if (item.lang !== "ko" && process.env.ANTHROPIC_API_KEY) {
     try {
-      const translated = await translateArticle(title, content, item.lang as "en" | "ja");
-      title    = translated.title;
-      summary  = translated.summary;
-      content  = translated.content;
-      tags     = translated.tags;
+      const translated = await translateArticle(title, content, item.lang as "en" | "ja", item.publishedAt);
+      title       = translated.title;
+      summary     = translated.summary;
+      content     = translated.content;
+      tags        = translated.tags;
+      // 본문/제목에서 실제 날짜를 파싱했으면 사용
+      if (translated.publishedAt) publishedAt = translated.publishedAt;
     } catch (err) {
       console.error("[Translate] failed:", err);
-      // 번역 실패 시 원문 그대로 저장
     }
   }
 
@@ -58,7 +60,7 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
       sourceUrl: item.url || null,
       tags: tags || null,
       isPublished: true,
-      publishedAt: item.publishedAt,
+      publishedAt: publishedAt,
     },
   });
 
