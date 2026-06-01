@@ -33,7 +33,7 @@ export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
   });
 
   return (feed.items ?? []).slice(0, 10).map((item) => {
-    const raw = item as Record<string, unknown>;
+    const raw = item as unknown as Record<string, unknown>;
     const content =
       (raw.contentSnippet as string) ??
       (raw.content as string) ??
