@@ -4,6 +4,7 @@ import { format, differenceInDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "포켓몬 카드게임 · 카파민" };
 
 const C = {

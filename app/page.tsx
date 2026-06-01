@@ -197,6 +197,8 @@ function NewsSection({ articles, accent, label, href }: { articles: Article[]; a
 /* ─────────────────────────────────────────
    메인 페이지
 ───────────────────────────────────────── */
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const now = new Date();
 
