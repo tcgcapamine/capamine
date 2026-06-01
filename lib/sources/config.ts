@@ -67,23 +67,23 @@ export const NEWS_SOURCES: NewsSource[] = [
     category: "pokemon", lang: "ko",
   },
 
-  // 전문 커뮤니티 RSS
+  // 전문 미디어 RSS
   {
     type: "rss",
-    name: "Serebii.net (EN)",
-    url: "https://www.serebii.net/rss.shtml",
+    name: "Dexerto · Pokémon (EN)",
+    url: "https://www.dexerto.com/pokemon/feed/",
     category: "pokemon", lang: "en",
   },
   {
     type: "rss",
-    name: "PokéBeach (EN)",
-    url: "https://www.pokebeach.com/news/rss",
+    name: "ComicBook · Pokémon (EN)",
+    url: "https://comicbook.com/category/pokemon/feed/",
     category: "pokemon", lang: "en",
   },
   {
     type: "rss",
-    name: "LimitlessTCG Blog (EN)",
-    url: "https://limitlesstcg.com/blog/rss.xml",
+    name: "PokémonBlog (EN)",
+    url: "https://pokemonblog.com/feed/",
     category: "pokemon", lang: "en",
   },
 

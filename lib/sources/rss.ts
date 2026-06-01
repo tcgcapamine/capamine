@@ -22,6 +22,7 @@ export interface FetchedItem {
   source: string;
   category: string;
   lang: string;
+  imageUrl?: string;
 }
 
 export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
@@ -40,6 +41,20 @@ export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
       (raw.summary as string) ??
       (raw["media:description"] as string) ??
       "";
+    // 이미지 추출: media:thumbnail > media:content > enclosure > content 내 첫 img
+    const mediaThumbnail = (raw.mediaThumbnail as { $?: { url?: string } } | string | undefined);
+    const mediaContent = (raw["media:content"] as { $?: { url?: string } } | undefined);
+    const enclosure = (raw.enclosure as { url?: string } | undefined);
+    let imageUrl: string | undefined;
+    if (typeof mediaThumbnail === "string") imageUrl = mediaThumbnail;
+    else if (mediaThumbnail?.$?.url) imageUrl = mediaThumbnail.$.url;
+    else if (mediaContent?.$?.url) imageUrl = mediaContent.$.url;
+    else if (enclosure?.url) imageUrl = enclosure.url;
+    else {
+      const imgMatch = (typeof content === "string" ? content : "").match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch) imageUrl = imgMatch[1];
+    }
+
     return {
       title: (item.title ?? "(제목 없음)").replace(/\[.*?\]/g, "").trim(),
       content: typeof content === "string" ? content.slice(0, 3000) : "",
@@ -48,6 +63,7 @@ export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
       source: src.name,
       category: src.category,
       lang: src.lang,
+      imageUrl,
     };
   });
 }

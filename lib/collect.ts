@@ -59,6 +59,7 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
       source: item.source,
       sourceUrl: item.url || null,
       tags: tags || null,
+      imageUrl: item.imageUrl ?? null,
       isPublished: true,
       publishedAt: publishedAt,
     },
