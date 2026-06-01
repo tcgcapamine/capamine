@@ -76,8 +76,8 @@ export const NEWS_SOURCES: NewsSource[] = [
   },
   {
     type: "rss",
-    name: "ComicBook · Pokémon (EN)",
-    url: "https://comicbook.com/category/pokemon/feed/",
+    name: "Google News · Pokémon 시세 (EN)",
+    url: 'https://news.google.com/rss/search?q="pokemon+card"+(price+OR+value+OR+expensive+OR+rare+OR+pull)&hl=en-US&gl=US&ceid=US:en',
     category: "pokemon", lang: "en",
   },
   {

@@ -5,12 +5,25 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "카파민 - TCG 뉴스 브리프",
-    template: "%s | 카파민",
+    default: "카파민 - TCG 뉴스 & 시세",
+    template: "%s · 카파민",
   },
-  description: "포켓몬, 원피스 카드게임 최신 뉴스, 시세, 발매 일정을 리포트 형식으로 제공합니다.",
-  keywords: ["포켓몬카드", "원피스카드게임", "TCG", "카드게임시세", "TCG뉴스"],
-  openGraph: { siteName: "카파민", locale: "ko_KR", type: "website" },
+  description: "포켓몬, 원피스 카드게임 최신 뉴스, 시세, 발매 일정을 한눈에. 매시간 업데이트.",
+  keywords: ["포켓몬카드", "원피스카드게임", "TCG", "카드게임시세", "TCG뉴스", "포켓몬TCG", "원피스TCG"],
+  metadataBase: new URL("https://capamine.vercel.app"),
+  openGraph: {
+    siteName: "카파민",
+    locale: "ko_KR",
+    type: "website",
+    title: "카파민 - TCG 뉴스 & 시세",
+    description: "포켓몬, 원피스 카드게임 최신 뉴스, 시세, 발매 일정을 한눈에. 매시간 업데이트.",
+    url: "https://capamine.vercel.app",
+  },
+  twitter: {
+    card: "summary",
+    title: "카파민 - TCG 뉴스 & 시세",
+    description: "포켓몬, 원피스 카드게임 최신 뉴스, 시세, 발매 일정.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
