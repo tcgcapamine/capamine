@@ -66,6 +66,13 @@ export const NEWS_SOURCES: NewsSource[] = [
     url: "https://news.google.com/rss/search?q=%ED%8F%AC%EC%BC%93%EB%AA%AC+%EC%B9%B4%EB%93%9C%EA%B2%8C%EC%9E%84&hl=ko&gl=KR&ceid=KR:ko",
     category: "pokemon", lang: "ko",
   },
+  // Google News (KR) — 대회/덱 정보
+  {
+    type: "rss",
+    name: "Google News · 포켓몬 대회덱 (KR)",
+    url: "https://news.google.com/rss/search?q=%ED%8F%AC%EC%BC%93%EB%AA%AC+%EC%B9%B4%EB%93%9C+%EB%8C%80%ED%9A%8C+OR+%EC%9A%B0%EC%8A%B9%EB%8D%B1+OR+%EB%8D%B1%EB%A0%88%EC%8B%9C%ED%94%BC&hl=ko&gl=KR&ceid=KR:ko",
+    category: "pokemon", lang: "ko",
+  },
 
   // 전문 미디어 RSS
   {
@@ -144,6 +151,13 @@ export const NEWS_SOURCES: NewsSource[] = [
     type: "rss",
     name: "Google News · 원피스 카드 (KR)",
     url: "https://news.google.com/rss/search?q=%EC%9B%90%ED%94%BC%EC%8A%A4+%EC%B9%B4%EB%93%9C%EA%B2%8C%EC%9E%84&hl=ko&gl=KR&ceid=KR:ko",
+    category: "onepiece", lang: "ko",
+  },
+  // Google News (KR) — 원피스 대회/덱
+  {
+    type: "rss",
+    name: "Google News · 원피스 대회덱 (KR)",
+    url: "https://news.google.com/rss/search?q=%EC%9B%90%ED%94%BC%EC%8A%A4+%EC%B9%B4%EB%93%9C+%EB%8C%80%ED%9A%8C+OR+%EC%9A%B0%EC%8A%B9%EB%8D%B1&hl=ko&gl=KR&ceid=KR:ko",
     category: "onepiece", lang: "ko",
   },
 

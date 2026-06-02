@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -125,7 +126,9 @@ export default async function DecksPage({ searchParams }: { searchParams: Promis
                       <span style={{ fontSize: "11px", color: C.text3 }}>{deck.tournament}</span>
                     )}
                   </div>
-                  <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, marginBottom: "8px", lineHeight: 1.3 }}>{deck.title}</h3>
+                  <Link href={`/decks/${deck.id}`} style={{ textDecoration: "none" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, marginBottom: "8px", lineHeight: 1.3, cursor: "pointer" }} className="hover-dim">{deck.title} →</h3>
+                  </Link>
                   {deck.description && (
                     <p style={{ fontSize: "13px", color: C.text2, lineHeight: 1.65, marginBottom: "10px" }}>{deck.description}</p>
                   )}
