@@ -3,20 +3,23 @@ import { prisma } from "@/lib/db";
 import { format, differenceInDays } from "date-fns";
 import { ko } from "date-fns/locale";
 
-/* ── 색상 ── */
+/* ── 색상 (Bloomberg + Gaming) ── */
 const C = {
-  bg: "#0a0a0a", s1: "#111111", s2: "#181818", s3: "#222222",
-  bd: "#272727", bd2: "#333333",
-  text: "#f0f0f0", text2: "#999999", text3: "#4a4a4a",
-  pk: "#ff9500", pkDim: "#1e1000",
+  bg: "#060d1f", s1: "#0a1628", s2: "#0f1f3a", s3: "#162540",
+  bd: "#1e3354", bd2: "#2a4468",
+  text: "#e8f4fd", text2: "#7aa8cc", text3: "#3a5c7a",
+  pk: "#ff9500", pkDim: "#1e0f00",
   op: "#e03030", opDim: "#1a0808",
-  green: "#00cc70", blue: "#4a9eff", red: "#ff3838",
+  cyan: "#00d4ff", cyanDim: "#001a2e",
+  gold: "#ffd700", goldDim: "#1a1400",
+  green: "#00ffaa", red: "#ff4444",
+  blue: "#00d4ff",
 };
 
 const CAT = {
-  pokemon:  { color: C.pk,  dim: C.pkDim,  label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
-  onepiece: { color: C.op,  dim: C.opDim,  label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
-  general:  { color: C.blue, dim: "#051524", label: "NEWS",     emoji: "📋",  href: "/" },
+  pokemon:  { color: C.pk,   dim: C.pkDim,   label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
+  onepiece: { color: C.op,   dim: C.opDim,   label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
+  general:  { color: C.cyan, dim: C.cyanDim, label: "NEWS",      emoji: "📋",  href: "/" },
 };
 const catOf = (k: string) => CAT[k as keyof typeof CAT] ?? CAT.general;
 
@@ -35,11 +38,11 @@ function fmtDate(a: Article, fmt = "M/d") {
 function Ticker({ articles }: { articles: Article[] }) {
   const items = [...articles, ...articles]; // 끊기지 않도록 복제
   return (
-    <div className="ticker-wrap" style={{ background: "#0d0d0d", borderBottom: `1px solid ${C.bd}`, height: "32px", overflow: "hidden", display: "flex", alignItems: "center" }}>
+    <div className="ticker-wrap" style={{ background: "#040a18", borderBottom: `1px solid ${C.bd}`, height: "32px", overflow: "hidden", display: "flex", alignItems: "center" }}>
       {/* LIVE 뱃지 */}
       <div style={{ flexShrink: 0, padding: "0 14px", borderRight: `1px solid ${C.bd}`, height: "100%", display: "flex", alignItems: "center", gap: "6px" }}>
-        <span className="price-live" style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.red, display: "inline-block" }} />
-        <span className="f-display" style={{ fontSize: "11px", fontWeight: 800, color: C.red, letterSpacing: "0.15em" }}>LIVE</span>
+        <span className="cyan-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.cyan, display: "inline-block" }} />
+        <span className="f-display" style={{ fontSize: "11px", fontWeight: 800, color: C.cyan, letterSpacing: "0.15em" }}>LIVE</span>
       </div>
       {/* 스크롤 트랙 */}
       <div style={{ overflow: "hidden", flex: 1 }}>
@@ -161,8 +164,8 @@ function NewsSection({ articles, accent, label, href }: { articles: Article[]; a
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "auto auto", gap: "2px", background: C.bd }} className="news-grid">
 
         {/* BIG CARD — 왼쪽 2행 차지 */}
-        <Link href={`/articles/${big.id}`} className="card-lift"
-          style={{ textDecoration: "none", gridRow: "1 / 3", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", overflow: "hidden", background: `linear-gradient(160deg, ${accent}12 0%, ${C.s1} 60%)`, padding: "28px 24px", minHeight: "280px" }}>
+        <Link href={`/articles/${big.id}`} className={`card-lift card-lift-${accent === C.pk ? "pk" : "op"}`}
+          style={{ textDecoration: "none", gridRow: "1 / 3", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", overflow: "hidden", background: `linear-gradient(160deg, ${accent}18 0%, ${C.s1} 55%)`, padding: "28px 24px", minHeight: "280px", borderTop: `2px solid ${accent}` }}>
           {/* Ghost 숫자 */}
           <span className="f-display" style={{ position: "absolute", top: "12px", right: "12px", fontSize: "120px", fontWeight: 900, color: accent, opacity: 0.05, lineHeight: 1, userSelect: "none" }}>
             01
@@ -231,7 +234,7 @@ export default async function HomePage() {
   const opPrices = prices.filter((p) => p.category === "onepiece");
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh" }}>
+    <div style={{ background: C.bg, minHeight: "100vh" }} className="terminal-grid">
 
       {/* ── LIVE 티커 ── */}
       {tickerArticles.length > 0 && <Ticker articles={tickerArticles} />}
@@ -244,8 +247,9 @@ export default async function HomePage() {
         <div style={{ borderBottom: `1px solid ${C.bd}`, overflowX: "auto" }}>
           <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 1.25rem", display: "flex", alignItems: "stretch" }}>
             {/* MARKET 라벨 */}
-            <div style={{ padding: "0 16px", display: "flex", alignItems: "center", borderRight: `1px solid ${C.bd}`, flexShrink: 0 }}>
-              <span className="f-display" style={{ fontSize: "10px", fontWeight: 900, color: C.text3, letterSpacing: "0.2em" }}>MARKET</span>
+            <div style={{ padding: "0 16px", display: "flex", alignItems: "center", gap: "8px", borderRight: `1px solid ${C.bd}`, flexShrink: 0, background: `${C.cyan}08` }}>
+              <span style={{ width: "2px", height: "14px", background: C.cyan, display: "inline-block", opacity: 0.8 }} />
+              <span className="f-display glow-cyan" style={{ fontSize: "10px", fontWeight: 900, color: C.cyan, letterSpacing: "0.2em" }}>MARKET</span>
             </div>
             {prices.slice(0, 7).map((p, i) => {
               const cat = catOf(p.category);
@@ -302,7 +306,7 @@ export default async function HomePage() {
             {/* 발매 예정 */}
             {events.length > 0 && (
               <div>
-                <SectionHead label="발매 예정" accent={C.blue} href="/calendar" />
+                <SectionHead label="발매 예정" accent={C.cyan} href="/calendar" />
                 <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                   {events.map((ev, i) => {
                     const d = new Date(ev.releaseDate);
