@@ -170,12 +170,9 @@ export const NEWS_SOURCES: NewsSource[] = [
     url: "https://en.onepiece-cardgame.com/news/",
     category: "onepiece", lang: "en",
   },
-  {
-    type: "scrape",
-    name: "ワンピースカードゲーム 公式 (JA)",
-    url: "https://onepiece-cardgame.com/news/",
-    category: "onepiece", lang: "ja",
-  },
+  // ワンピース公式JA 스크래퍼 제거 — 메뉴 항목만 수집되는 문제
+  // 대신 Google News JA로 커버
+
 ];
 
 // 하위호환용 (rss만 필요할 때)

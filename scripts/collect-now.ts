@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-config(); // .env 파일 자동 로딩
+config({ override: true }); // Windows 환경변수가 빈 값이어도 .env 값으로 강제 덮어쓰기
 import { collectAll } from "../lib/collect";
 
 async function main() {
