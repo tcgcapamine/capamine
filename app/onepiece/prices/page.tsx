@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 
@@ -58,7 +59,9 @@ export default async function OnePiecePricesPage() {
               }}>
                 <div className="f-display" style={{ padding: "14px", fontSize: "14px", fontWeight: 900, color: i < 3 ? C.op : C.text3 }}>{i + 1}</div>
                 <div style={{ padding: "14px 14px 14px 0" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "3px" }}>{card.cardName}</div>
+                  <Link href={`/prices/${card.id}`} style={{ textDecoration: "none" }}>
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "3px" }} className="hover-dim">{card.cardName} →</div>
+                  </Link>
                   <div style={{ fontSize: "11px", color: C.text3 }}>{card.setName}</div>
                   {card.source && <div style={{ fontSize: "10px", color: C.text3, marginTop: "2px" }}>출처: {card.source}</div>}
                 </div>

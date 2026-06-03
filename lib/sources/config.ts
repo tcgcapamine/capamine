@@ -94,11 +94,11 @@ export const NEWS_SOURCES: NewsSource[] = [
     category: "pokemon", lang: "en",
   },
 
-  // 포켓몬 한국 공식 뉴스 (Google News 경유)
+  // 포켓몬 한국 공식 뉴스 (Google News 경유 — URL 인코딩)
   {
     type: "rss",
     name: "Google News · 포켓몬 공식 (KR)",
-    url: "https://news.google.com/rss/search?q=포켓몬카드+OR+포켓몬TCG+site:pokemonkorea.co.kr+OR+site:pokemoncard.co.kr&hl=ko&gl=KR&ceid=KR:ko",
+    url: "https://news.google.com/rss/search?q=%ED%8F%AC%EC%BC%93%EB%AA%AC%EC%B9%B4%EB%93%9C+OR+%ED%8F%AC%EC%BC%93%EB%AA%AC+TCG+site%3Apokemonkorea.co.kr+OR+site%3Apokemoncard.co.kr&hl=ko&gl=KR&ceid=KR%3Ako",
     category: "pokemon", lang: "ko",
   },
   {

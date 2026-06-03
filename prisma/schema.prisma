@@ -49,6 +49,15 @@ model ReleaseEvent {
   createdAt   DateTime @default(now())
 }
 
+model CardPriceHistory {
+  id         String   @id @default(cuid())
+  cardPriceId String
+  price      Int
+  recordedAt DateTime @default(now())
+
+  @@index([cardPriceId, recordedAt])
+}
+
 model DeckRecipe {
   id          String   @id @default(cuid())
   title       String

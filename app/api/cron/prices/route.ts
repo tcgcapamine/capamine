@@ -24,6 +24,10 @@ export async function GET(req: NextRequest) {
 
       if (existing) {
         if (existing.price !== item.price) {
+          // 히스토리 기록 후 업데이트
+          await prisma.cardPriceHistory.create({
+            data: { cardPriceId: existing.id, price: existing.price },
+          });
           await prisma.cardPrice.update({
             where: { id: existing.id },
             data: { prevPrice: existing.price, price: item.price, recordedAt: new Date() },

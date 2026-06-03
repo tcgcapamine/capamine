@@ -10,6 +10,7 @@ const nav = [
   { href: "/onepiece", label: "원피스",   en: "ONE PIECE", color: "#e03030" },
   { href: "/calendar", label: "발매일정", en: "RELEASE" },
   { href: "/decks",    label: "덱레시피", en: "DECKS" },
+  { href: "/cards",    label: "카드DB",   en: "CARDS",  color: "#00d4ff" },
 ];
 
 export default function Header() {
