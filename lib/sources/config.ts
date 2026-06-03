@@ -87,10 +87,12 @@ export const NEWS_SOURCES: NewsSource[] = [
     url: 'https://news.google.com/rss/search?q="pokemon+card"+(price+OR+value+OR+expensive+OR+rare+OR+pull)&hl=en-US&gl=US&ceid=US:en',
     category: "pokemon", lang: "en",
   },
+  // PokémonBlog는 포켓몬 GO 기사가 많아 제외
+  // 대신 TCG 특화 쿼리 추가
   {
     type: "rss",
-    name: "PokémonBlog (EN)",
-    url: "https://pokemonblog.com/feed/",
+    name: "Google News · Pokémon TCG 신카드 (EN)",
+    url: 'https://news.google.com/rss/search?q="pokemon+card"+("new+card"+OR+"secret+rare"+OR+"special+illustration"+OR+SAR+OR+spoiler)&hl=en-US&gl=US&ceid=US:en',
     category: "pokemon", lang: "en",
   },
 

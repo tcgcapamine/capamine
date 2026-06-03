@@ -18,11 +18,20 @@ export async function GET(req: NextRequest) {
   const untranslated = await prisma.article.findMany({
     where: {
       isPublished: true,
-      OR: [
-        { source: { contains: "(EN)" } },
-        { source: { contains: "(JA)" } },
+      AND: [
+        {
+          OR: [
+            { source: { contains: "(EN)" } },
+            { source: { contains: "(JA)" } },
+          ],
+        },
+        {
+          OR: [
+            { summary: null },
+            { summary: "" },
+          ],
+        },
       ],
-      summary: null, // 번역됐으면 summary가 있음
     },
     orderBy: { createdAt: "desc" },
     take: 10,

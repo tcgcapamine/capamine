@@ -50,6 +50,11 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   // 제목이 너무 짧으면 저장 안 함
   if (!title || title.length < 5) return "skipped";
 
+  // TCG 무관 키워드 필터 (포켓몬 GO, 애니, 게임 등 카드게임과 무관한 기사 제외)
+  const lowerTitle = title.toLowerCase();
+  const excludeKeywords = ["pokémon go", "pokemon go", "포켓몬 go", "anime", "アニメ", "movie", "영화", "nintendo switch", "carplay", "android auto", "playlist", "music"];
+  if (excludeKeywords.some(kw => lowerTitle.includes(kw))) return "skipped";
+
   await prisma.article.create({
     data: {
       title,
