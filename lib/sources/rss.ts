@@ -18,6 +18,7 @@ export interface FetchedItem {
   title: string;
   content: string;
   url: string;
+  realSourceUrl?: string;  // 실제 기사 URL (Google News가 아닌)
   publishedAt: Date;
   source: string;
   category: string;
@@ -55,10 +56,21 @@ export async function fetchRss(src: RssSource): Promise<FetchedItem[]> {
       if (imgMatch) imageUrl = imgMatch[1];
     }
 
+    // Google News RSS: <source url="실제사이트"> 에서 실제 기사 URL 추출 시도
+    const sourceElem = raw.source as { url?: string; "#"?: string } | undefined;
+    const sourceDomain = sourceElem?.url ?? "";
+    // description에서 실제 기사 href 추출 (Google News가 아닌 URL)
+    const descHtml = (raw.description as string) ?? "";
+    const descHrefMatch = descHtml.match(/href=["']([^"']+)["']/g);
+    const realUrl = descHrefMatch
+      ?.map(h => h.replace(/href=["']/g, "").replace(/["']/g, ""))
+      .find(u => !u.includes("news.google.com") && u.startsWith("http"));
+
     return {
       title: (item.title ?? "(제목 없음)").replace(/\[.*?\]/g, "").trim(),
       content: typeof content === "string" ? content.slice(0, 3000) : "",
       url: item.link ?? "",
+      realSourceUrl: realUrl ?? sourceDomain ?? "",  // 실제 기사 URL (또는 소스 도메인)
       publishedAt: item.pubDate ? new Date(item.pubDate) : new Date(),
       source: src.name,
       category: src.category,

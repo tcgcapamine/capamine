@@ -232,11 +232,8 @@ export async function notifyImportantArticle(article: TelegramArticle, force = f
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
 
-  // 기본 카테고리 이미지 (Google News 기사 이미지 없을 때 fallback)
-  const DEFAULT_IMAGES: Record<string, string> = {
-    pokemon:  "https://www.pokemon.com/static-assets/content-assets/cms2/img/cards/web/SV8PT5/SV8PT5_EN_1.png",
-    onepiece: "https://en.onepiece-cardgame.com/images/top/key_visual.jpg",
-  };
+  // 기본 카테고리 이미지 — 이미지 못 찾으면 사용 안 함 (텍스트만 발송)
+  const DEFAULT_IMAGES: Record<string, string> = {};
 
   // 이미지 + 포맷 병렬 생성 (Google News URL도 디코딩해서 실제 이미지 추출)
   const [fmt, fetchedImage] = await Promise.all([
