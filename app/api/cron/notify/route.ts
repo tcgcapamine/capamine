@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         where: { isPublished: true, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
         take: 20,
-        select: { id: true, title: true, summary: true, category: true, source: true, sourceUrl: true },
+        select: { id: true, title: true, summary: true, content: true, category: true, source: true, sourceUrl: true },
       });
 
       let notified = 0;

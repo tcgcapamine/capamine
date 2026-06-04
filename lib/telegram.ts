@@ -109,59 +109,66 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
-/** 중요 기사 알림 — 섹션 구조 포맷 */
+/** Claude로 텔레그램용 구조화 포맷 실시간 생성 (DB 저장 안 함) */
+async function generateTelegramFormat(article: TelegramArticle): Promise<{ bullets: string[]; context: string } | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const input = `제목: ${article.title}\n요약: ${(article.summary ?? "").slice(0, 300)}\n내용: ${(article.content ?? "").slice(0, 500)}`;
+    const res = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [{
+        role: "user",
+        content: `다음 TCG 뉴스를 텔레그램 알림용으로 정리하세요. JSON만 출력.\n\n${input}\n\n{"bullets":["핵심사실1","핵심사실2","핵심사실3"],"context":"배경설명 2문장"}`,
+      }],
+    });
+    const text = res.content[0].type === "text" ? res.content[0].text : "{}";
+    const match = text.match(/\{[\s\S]*\}/);
+    const json = JSON.parse(match?.[0] ?? "{}");
+    return { bullets: json.bullets ?? [], context: json.context ?? "" };
+  } catch { return null; }
+}
+
+/** 중요 기사 알림 — Claude가 발송 시점에 포맷 생성 (DB 수정 없음) */
 export async function notifyImportantArticle(article: TelegramArticle): Promise<boolean> {
   if (!isImportantArticle(article)) return false;
 
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
 
-  // summary에서 불릿 포인트 파싱 (· 또는 - 로 시작하는 줄)
-  const bulletLines = (article.summary ?? "")
-    .split("\n")
-    .map(l => l.trim())
-    .filter(l => l.startsWith("·") || l.startsWith("-") || l.startsWith("•"));
-
-  const hasbullets = bulletLines.length >= 2;
-  const contextText = hasbullets
-    ? (article.content?.slice(0, 280) ?? article.summary ?? "")
-    : (article.summary ?? "");
+  // Claude로 구조화 포맷 실시간 생성 (저장 안 함)
+  const fmt = await generateTelegramFormat(article);
 
   const b = new MsgBuilder();
-
-  // ⭐ POKÉMON TCG · 주요 소식
   b.emoji(EMOJI.STAR).bold(` ${label} · 주요 소식`).nl(2);
-
-  // 제목
   b.bold(article.title).nl(2);
 
-  // 💡 핵심 섹션
-  if (hasbullets) {
+  if (fmt && fmt.bullets.length >= 2) {
     b.bold("💡 핵심").nl();
-    for (const line of bulletLines.slice(0, 4)) {
-      const clean = line.replace(/^[·\-•]\s*/, "");
-      b.add(`· ${clean}`).nl();
+    for (const bullet of fmt.bullets.slice(0, 4)) {
+      b.add(`· ${bullet}`).nl();
     }
     b.nl();
   }
 
-  // 📖 내용 섹션
-  if (contextText && contextText.length > 20) {
+  if (fmt?.context) {
     b.bold("📖 내용").nl();
-    b.add(contextText.slice(0, 280)).nl(2);
+    b.add(fmt.context.slice(0, 250)).nl(2);
+  } else if (article.summary) {
+    b.bold("📖 내용").nl();
+    b.add(article.summary.slice(0, 200)).nl(2);
   }
 
-  // 구분선 + 링크
   b.add("─────────────────────").nl()
    .emoji(EMOJI.ARROW).link(` 카파민에서 자세히 보기`, articleUrl);
-
   if (article.sourceUrl) {
     b.nl().emoji(EMOJI.ARROW).link(` 원문 바로가기`, article.sourceUrl);
   }
 
   const { text, entities } = b.build();
   const payload = { text, entities };
-
   if (article.imageUrl) return sendPhoto(article.imageUrl, { caption: text, caption_entities: entities });
   return send(payload);
 }
