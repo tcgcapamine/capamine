@@ -178,11 +178,20 @@ export async function notifyImportantArticle(article: TelegramArticle, force = f
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
 
+  // 기본 카테고리 이미지 (Google News 기사 이미지 없을 때 fallback)
+  const DEFAULT_IMAGES: Record<string, string> = {
+    pokemon:  "https://www.pokemon.com/static-assets/content-assets/cms2/img/cards/web/SV8PT5/SV8PT5_EN_1.png",
+    onepiece: "https://en.onepiece-cardgame.com/images/top/key_visual.jpg",
+  };
+
   // 이미지 + 포맷 병렬 생성
-  const [fmt, imageUrl] = await Promise.all([
+  const [fmt, fetchedImage] = await Promise.all([
     generateTelegramFormat(article),
-    article.imageUrl ?? (article.sourceUrl ? fetchOgImage(article.sourceUrl) : null),
+    article.imageUrl ?? (article.sourceUrl && !article.sourceUrl.includes("news.google.com")
+      ? fetchOgImage(article.sourceUrl)
+      : null),
   ]);
+  const imageUrl = fetchedImage ?? DEFAULT_IMAGES[article.category] ?? null;
 
   const b = new MsgBuilder();
   b.emoji(EMOJI.STAR).bold(` ${label} · 주요 소식`).nl(2);
