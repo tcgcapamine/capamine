@@ -3,6 +3,7 @@ import { NEWS_SOURCES, type RssSource, type ScrapeSource } from "./sources/confi
 import { fetchRss, type FetchedItem } from "./sources/rss";
 import { fetchScrape } from "./sources/scrape";
 import { translateArticle } from "./translate";
+import { notifyImportantArticle } from "./telegram";
 
 export interface CollectResult {
   source: string;
@@ -55,7 +56,7 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   const excludeKeywords = ["pokémon go", "pokemon go", "포켓몬 go", "anime", "アニメ", "movie", "영화", "nintendo switch", "carplay", "android auto", "playlist", "music"];
   if (excludeKeywords.some(kw => lowerTitle.includes(kw))) return "skipped";
 
-  await prisma.article.create({
+  const saved = await prisma.article.create({
     data: {
       title,
       summary,
@@ -69,6 +70,12 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
       publishedAt: publishedAt,
     },
   });
+
+  // 중요 기사 텔레그램 알림 (비동기, 실패해도 무시)
+  notifyImportantArticle({
+    id: saved.id, title, summary, category: item.category,
+    source: item.source, sourceUrl: item.url || null,
+  }).catch(() => {});
 
   return "saved";
 }

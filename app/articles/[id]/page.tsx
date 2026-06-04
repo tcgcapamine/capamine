@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import type { Metadata } from "next";
+import { getRelatedPokemonCards, getOnePieceCardUrl } from "@/lib/cards/pokemon-api";
 
 const C = {
   bg: "#0a0a0a", s1: "#111111", s2: "#1a1a1a", bd: "#2a2a2a",
@@ -46,6 +47,11 @@ export default async function ArticlePage(
     "yyyy년 M월 d일 (EEE)",
     { locale: ko }
   );
+
+  // 관련 포켓몬 카드 (태그 기반)
+  const relatedCards = article.category === "pokemon" && article.tags
+    ? await getRelatedPokemonCards(article.tags)
+    : [];
 
   // 관련 기사 (같은 카테고리, 최신 4건)
   const related = await prisma.article.findMany({
@@ -178,6 +184,51 @@ export default async function ArticlePage(
 
           {/* 오른쪽: 사이드바 */}
           <div style={{ position: "sticky", top: "76px" }}>
+
+            {/* 관련 카드 (포켓몬) */}
+            {relatedCards.length > 0 && (
+              <div style={{ background: C.s1, border: `1px solid ${C.bd}`, marginBottom: "16px" }}>
+                <div style={{ padding: "11px 14px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "4px", height: "16px", background: cat.color, display: "inline-block" }} />
+                  <span style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>관련 카드</span>
+                  <Link href="/cards" style={{ marginLeft: "auto", fontSize: "10px", color: C.text3 }}>카드 DB →</Link>
+                </div>
+                <div style={{ padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  {relatedCards.map(card => (
+                    <Link key={card.id} href={`/cards/${card.id}`} style={{ textDecoration: "none" }} className="hover-dim">
+                      <div style={{ textAlign: "center" }}>
+                        <img src={card.images.small} alt={card.name}
+                          style={{ width: "100%", borderRadius: "4px", border: `1px solid ${C.bd}` }}
+                          loading="lazy" />
+                        <div style={{ fontSize: "10px", color: C.text2, marginTop: "4px", lineHeight: 1.3 }} className="line-clamp-2">{card.name}</div>
+                        {card.rarity && (
+                          <div style={{ fontSize: "9px", color: cat.color, fontWeight: 700, marginTop: "2px" }}>{card.rarity}</div>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 원피스 카드 검색 링크 */}
+            {article.category === "onepiece" && article.tags && (
+              <div style={{ background: C.s1, border: `1px solid ${C.bd}`, marginBottom: "16px" }}>
+                <div style={{ padding: "11px 14px", borderBottom: `1px solid ${C.bd}`, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "4px", height: "16px", background: cat.color, display: "inline-block" }} />
+                  <span style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>관련 카드 검색</span>
+                </div>
+                <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {article.tags.split(",").slice(0, 3).map(t => t.trim()).filter(t => t.length > 2).map(tag => (
+                    <a key={tag} href={getOnePieceCardUrl(tag)} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: "12px", color: cat.color, padding: "6px 10px", border: `1px solid ${cat.color}40`, display: "block" }}
+                      className="hover-dim">
+                      🔍 "{tag}" 카드 보기 →
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 관련 기사 */}
             <div style={{ background: C.s1, border: `1px solid ${C.bd}` }}>
