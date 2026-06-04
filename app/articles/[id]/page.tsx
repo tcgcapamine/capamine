@@ -119,14 +119,29 @@ export default async function ArticlePage(
 
           {/* 왼쪽: 본문 */}
           <div>
-            {/* 요약 */}
-            {article.summary && (
-              <div style={{ background: cat.dim, border: `1px solid ${cat.color}20`, borderLeft: `3px solid ${cat.color}`, padding: "14px 16px", marginBottom: "28px" }}>
-                <p style={{ fontSize: "14px", color: C.text2, lineHeight: 1.8, fontWeight: 500 }}>
-                  {article.summary}
-                </p>
-              </div>
-            )}
+            {/* 요약 — 불릿 or 일반 텍스트 */}
+            {article.summary && (() => {
+              const lines = article.summary.split("\n").map(l => l.trim()).filter(Boolean);
+              const bullets = lines.filter(l => l.startsWith("·") || l.startsWith("-") || l.startsWith("•"));
+              const isBullet = bullets.length >= 2;
+              return (
+                <div style={{ background: cat.dim, border: `1px solid ${cat.color}20`, borderLeft: `3px solid ${cat.color}`, padding: "16px 18px", marginBottom: "28px" }}>
+                  {isBullet ? (
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 900, color: cat.color, letterSpacing: "0.12em", marginBottom: "10px" }}>💡 핵심 요약</div>
+                      {bullets.map((line, i) => (
+                        <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "7px", alignItems: "flex-start" }}>
+                          <span style={{ color: cat.color, fontWeight: 900, flexShrink: 0, marginTop: "1px" }}>·</span>
+                          <span style={{ fontSize: "14px", color: C.text2, lineHeight: 1.7 }}>{line.replace(/^[·\-•]\s*/, "")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "14px", color: C.text2, lineHeight: 1.8, fontWeight: 500 }}>{article.summary}</p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* 본문 단락 */}
             <div style={{ color: C.text2, lineHeight: 1.9, fontSize: "15px" }}>

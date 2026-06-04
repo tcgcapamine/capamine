@@ -16,6 +16,7 @@ export interface TelegramArticle {
   id: string;
   title: string;
   summary: string | null;
+  content?: string | null;
   category: string;
   source: string | null;
   sourceUrl: string | null;
@@ -108,41 +109,54 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
-/** 중요 기사 알림 */
+/** 중요 기사 알림 — 섹션 구조 포맷 */
 export async function notifyImportantArticle(article: TelegramArticle): Promise<boolean> {
   if (!isImportantArticle(article)) return false;
 
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
-  const tags = article.tags
-    ? article.tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 4)
-    : [];
+
+  // summary에서 불릿 포인트 파싱 (· 또는 - 로 시작하는 줄)
+  const bulletLines = (article.summary ?? "")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.startsWith("·") || l.startsWith("-") || l.startsWith("•"));
+
+  const hasbullets = bulletLines.length >= 2;
+  const contextText = hasbullets
+    ? (article.content?.slice(0, 280) ?? article.summary ?? "")
+    : (article.summary ?? "");
 
   const b = new MsgBuilder();
 
   // ⭐ POKÉMON TCG · 주요 소식
   b.emoji(EMOJI.STAR).bold(` ${label} · 주요 소식`).nl(2);
 
-  // 제목 (볼드)
-  b.bold(article.title).nl();
+  // 제목
+  b.bold(article.title).nl(2);
 
-  // ✔️ 태그 불릿
-  for (const tag of tags) {
-    b.emoji(EMOJI.CHECK, true).bold(` ${tag}`).nl();
+  // 💡 핵심 섹션
+  if (hasbullets) {
+    b.bold("💡 핵심").nl();
+    for (const line of bulletLines.slice(0, 4)) {
+      const clean = line.replace(/^[·\-•]\s*/, "");
+      b.add(`· ${clean}`).nl();
+    }
+    b.nl();
   }
 
-  // 요약
-  if (article.summary) {
-    b.nl().add(article.summary).nl();
+  // 📖 내용 섹션
+  if (contextText && contextText.length > 20) {
+    b.bold("📖 내용").nl();
+    b.add(contextText.slice(0, 280)).nl(2);
   }
 
   // 구분선 + 링크
-  b.nl()
-    .add("─────────────────────").nl()
-    .emoji(EMOJI.ARROW).link(` 카파민에서 자세히 보기`, articleUrl).nl();
+  b.add("─────────────────────").nl()
+   .emoji(EMOJI.ARROW).link(` 카파민에서 자세히 보기`, articleUrl);
 
   if (article.sourceUrl) {
-    b.emoji(EMOJI.ARROW).link(` 원문 바로가기`, article.sourceUrl);
+    b.nl().emoji(EMOJI.ARROW).link(` 원문 바로가기`, article.sourceUrl);
   }
 
   const { text, entities } = b.build();

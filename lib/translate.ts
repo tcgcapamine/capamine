@@ -4,8 +4,8 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export interface TranslateResult {
   title: string;
-  summary: string;
-  content: string;
+  summary: string;   // 핵심 불릿 포인트들 (· 구분)
+  content: string;   // 배경/상세 내용
   tags: string;
   publishedAt?: Date;
 }
@@ -25,17 +25,17 @@ export async function translateArticle(
     messages: [
       {
         role: "user",
-        content: `다음 ${langLabel} TCG 뉴스 기사를 한국어로 번역하세요. JSON만 출력.
+        content: `다음 ${langLabel} TCG 뉴스를 한국어로 번역하세요. JSON만 출력.
 
 제목: ${title}
 내용: ${shortContent}
 
 규칙:
-- summary: 기사의 핵심 내용을 4~5문장으로 상세하게 요약. 구체적인 카드명, 수치, 날짜, 대회명 등 중요 정보를 포함.
-- content: 기사 전체를 자연스러운 한국어로 번역 (500~800자 목표)
-- tags: 핵심 키워드 4~5개 (카드명, 세트명, 레어도 등 포함)
+- summary: 핵심 사실 3~4개를 "· 사실1\n· 사실2\n· 사실3" 형식으로. 카드명/수치/날짜 등 구체적 정보 포함.
+- content: 기사 배경과 맥락을 자연스러운 한국어 문장으로 200~300자. "왜 중요한지" 포함.
+- tags: 핵심 키워드 4~5개
 
-{"title":"한국어제목","summary":"상세요약4~5문장","content":"전체번역내용","tags":"태그1,태그2,태그3,태그4","publishedAt":"YYYY-MM-DD 또는 null"}`,
+{"title":"한국어제목","summary":"· 핵심1\n· 핵심2\n· 핵심3","content":"배경설명200-300자","tags":"태그1,태그2,태그3","publishedAt":"YYYY-MM-DD 또는 null"}`,
       },
     ],
   });
@@ -58,7 +58,7 @@ export async function translateArticle(
     return {
       title: json.title ?? title,
       summary: json.summary ?? "",
-      content: json.content || content,  // 번역된 본문 사용
+      content: json.content || content,
       tags: json.tags ?? "",
       publishedAt,
     };
