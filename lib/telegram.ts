@@ -85,40 +85,49 @@ async function sendPhoto(imageUrl: string, caption: string): Promise<boolean> {
   }
 }
 
-/** 중요 기사 알림 — 개선된 포맷 */
+/** 중요 기사 알림 */
 export async function notifyImportantArticle(article: TelegramArticle): Promise<boolean> {
   if (!isImportantArticle(article)) return false;
 
   const cat = getCatInfo(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
 
-  // 태그를 해시태그로 변환
-  const hashtags = article.tags
-    ? article.tags.split(",").slice(0, 3)
-        .map(t => `#${t.trim().replace(/\s+/g, "_")}`)
-        .join(" ")
+  // 태그를 ✔️ 불릿 포인트로
+  const tagBullets = article.tags
+    ? article.tags.split(",").slice(0, 4)
+        .map(t => t.trim()).filter(Boolean)
+        .map(t => `✔️ ${t}`)
+        .join("\n")
     : "";
 
-  const caption = [
-    `${cat.color} <b>${cat.emoji} ${cat.label} · 주요 소식</b>`,
+  const lines = [
+    `⚡ <b>${cat.label} · 주요 소식</b>`,
     ``,
     `<b>${article.title}</b>`,
-    ``,
-    article.summary ? `💬 ${article.summary}` : "",
+  ];
+
+  if (tagBullets) {
+    lines.push("", tagBullets);
+  }
+
+  if (article.summary) {
+    lines.push("", article.summary);
+  }
+
+  lines.push(
     ``,
     `─────────────────────`,
-    article.source ? `📰 <i>${article.source}</i>` : "",
-    ``,
-    `<a href="${articleUrl}">📖 카파민에서 자세히 보기</a>`,
-    article.sourceUrl ? `<a href="${article.sourceUrl}">🔗 원문 바로가기</a>` : "",
-    hashtags ? `\n${hashtags}` : "",
-  ].filter(l => l !== undefined && l !== null && l !== "").join("\n");
+    `➡️ <a href="${articleUrl}">카파민에서 자세히 보기</a>`,
+  );
 
-  // 이미지가 있으면 사진으로, 없으면 텍스트로
-  if (article.imageUrl) {
-    return sendPhoto(article.imageUrl, caption);
+  if (article.sourceUrl) {
+    lines.push(`➡️ <a href="${article.sourceUrl}">원문 바로가기</a>`);
   }
-  return sendMessage(caption);
+
+  const text = lines.join("\n");
+
+  if (article.imageUrl) return sendPhoto(article.imageUrl, text);
+  return sendMessage(text);
 }
 
 /** 일일 요약 */
