@@ -109,12 +109,26 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
-/** 기사 원문 URL에서 og:image 추출 */
+/** 기사 원문 URL에서 og:image 추출 (리다이렉트 추적) */
 async function fetchOgImage(url: string): Promise<string | null> {
   if (!url) return null;
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36" },
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36";
+
+    // Google News URL은 리다이렉트 따라가기
+    let finalUrl = url;
+    if (url.includes("news.google.com")) {
+      const r = await fetch(url, {
+        headers: { "User-Agent": UA },
+        redirect: "follow",
+        signal: AbortSignal.timeout(5000),
+      });
+      finalUrl = r.url; // 최종 리다이렉트 URL
+      if (finalUrl.includes("news.google.com")) return null; // 리다이렉트 안 된 경우
+    }
+
+    const res = await fetch(finalUrl, {
+      headers: { "User-Agent": UA },
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
@@ -125,7 +139,7 @@ async function fetchOgImage(url: string): Promise<string | null> {
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
     if (ogImage?.[1]) return ogImage[1];
 
-    // twitter:image 추출 (fallback)
+    // twitter:image fallback
     const twImage = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
     if (twImage?.[1]) return twImage[1];
