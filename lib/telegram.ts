@@ -109,6 +109,31 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
+/** 기사 원문 URL에서 og:image 추출 */
+async function fetchOgImage(url: string): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // og:image 추출
+    const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (ogImage?.[1]) return ogImage[1];
+
+    // twitter:image 추출 (fallback)
+    const twImage = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+    if (twImage?.[1]) return twImage[1];
+
+    return null;
+  } catch { return null; }
+}
+
 /** Claude로 텔레그램용 구조화 포맷 실시간 생성 (DB 저장 안 함) */
 async function generateTelegramFormat(article: TelegramArticle): Promise<{ bullets: string[]; context: string } | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null;
@@ -138,8 +163,11 @@ export async function notifyImportantArticle(article: TelegramArticle): Promise<
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
 
-  // Claude로 구조화 포맷 실시간 생성 (저장 안 함)
-  const fmt = await generateTelegramFormat(article);
+  // 이미지 + 포맷 병렬 생성
+  const [fmt, imageUrl] = await Promise.all([
+    generateTelegramFormat(article),
+    article.imageUrl ?? (article.sourceUrl ? fetchOgImage(article.sourceUrl) : null),
+  ]);
 
   const b = new MsgBuilder();
   b.emoji(EMOJI.STAR).bold(` ${label} · 주요 소식`).nl(2);
@@ -168,9 +196,8 @@ export async function notifyImportantArticle(article: TelegramArticle): Promise<
   }
 
   const { text, entities } = b.build();
-  const payload = { text, entities };
-  if (article.imageUrl) return sendPhoto(article.imageUrl, { caption: text, caption_entities: entities });
-  return send(payload);
+  if (imageUrl) return sendPhoto(imageUrl, { caption: text, caption_entities: entities });
+  return send({ text, entities });
 }
 
 /** 일일 요약 */
