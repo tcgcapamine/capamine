@@ -9,7 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const mode = new URL(req.url).searchParams.get("mode") ?? "summary";
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("mode") ?? "summary";
+  const limit = parseInt(url.searchParams.get("limit") ?? "20");
 
   try {
     if (mode === "important") {
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
       });
 
       let notified = 0;
-      for (const article of recent) {
+      for (const article of recent.slice(0, limit)) {
         const sent = await notifyImportantArticle(article);
         if (sent) notified++;
       }
