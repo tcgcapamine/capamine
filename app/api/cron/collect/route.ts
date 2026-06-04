@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectAll } from "@/lib/collect";
 
-// 번역 없이 빠르게 수집만 — Vercel 10초 제한 대응
-// 번역은 /api/cron/translate 에서 30분마다 처리
+// 수집 + 실시간 번역
+// 번역을 제목+요약만 하도록 최적화해서 기사당 0.3~0.8초 → 10초 안에 10~20개 번역 가능
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -10,11 +12,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    process.env.NO_TRANSLATE = "true";
     const summary = await collectAll();
-    delete process.env.NO_TRANSLATE;
-    return NextResponse.json({ ok: true, timestamp: new Date().toISOString(), saved: summary.totalSaved });
+    return NextResponse.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      saved: summary.totalSaved,
+      durationMs: summary.durationMs,
+    });
   } catch (err) {
+    console.error("[cron/collect]", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

@@ -32,8 +32,8 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   let tags = "";
   let publishedAt = item.publishedAt;
 
-  // 한국어가 아니면 Claude로 번역 + 날짜 파싱 (NO_TRANSLATE 플래그 시 스킵)
-  if (item.lang !== "ko" && process.env.ANTHROPIC_API_KEY && !process.env.NO_TRANSLATE) {
+  // 한국어가 아니면 Claude로 번역 + 날짜 파싱
+  if (item.lang !== "ko" && process.env.ANTHROPIC_API_KEY) {
     try {
       const translated = await translateArticle(title, content, item.lang as "en" | "ja", item.publishedAt);
       title       = translated.title;
