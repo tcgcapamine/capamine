@@ -10,10 +10,6 @@ export interface TranslateResult {
   publishedAt?: Date;
 }
 
-/**
- * 빠른 번역 — 제목 + 요약만 번역 (Vercel 10초 제한 대응)
- * max_tokens 줄이고, 내용 입력도 최소화해서 기사당 0.3~0.8초 목표
- */
 export async function translateArticle(
   title: string,
   content: string,
@@ -21,23 +17,25 @@ export async function translateArticle(
   fallbackDate?: Date,
 ): Promise<TranslateResult> {
   const langLabel = lang === "ja" ? "일본어" : "영어";
-  const currentYear = new Date().getFullYear();
-
-  // 입력 최소화: 제목 + 내용 앞 500자만
-  const shortContent = content.slice(0, 500);
+  const shortContent = content.slice(0, 1500);
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,  // 1800 → 600으로 축소 (3배 빠름)
+    max_tokens: 1200,
     messages: [
       {
         role: "user",
-        content: `${langLabel} TCG 뉴스를 한국어로 번역하세요. JSON만 출력.
+        content: `다음 ${langLabel} TCG 뉴스 기사를 한국어로 번역하세요. JSON만 출력.
 
 제목: ${title}
 내용: ${shortContent}
 
-{"title":"한국어제목","summary":"2문장요약","tags":"태그1,태그2,태그3","publishedAt":"날짜(YYYY-MM-DD) 또는 null"}`,
+규칙:
+- summary: 기사의 핵심 내용을 4~5문장으로 상세하게 요약. 구체적인 카드명, 수치, 날짜, 대회명 등 중요 정보를 포함.
+- content: 기사 전체를 자연스러운 한국어로 번역 (500~800자 목표)
+- tags: 핵심 키워드 4~5개 (카드명, 세트명, 레어도 등 포함)
+
+{"title":"한국어제목","summary":"상세요약4~5문장","content":"전체번역내용","tags":"태그1,태그2,태그3,태그4","publishedAt":"YYYY-MM-DD 또는 null"}`,
       },
     ],
   });
@@ -60,7 +58,7 @@ export async function translateArticle(
     return {
       title: json.title ?? title,
       summary: json.summary ?? "",
-      content: content, // 본문은 원문 유지 (번역 시간 절약)
+      content: json.content || content,  // 번역된 본문 사용
       tags: json.tags ?? "",
       publishedAt,
     };
