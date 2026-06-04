@@ -110,37 +110,91 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
-/** 기사 원문 URL에서 og:image 추출 (리다이렉트 추적) */
+/** Google News URL → 실제 기사 URL 디코딩 (batchexecute API) */
+async function decodeGoogleNewsUrl(sourceUrl: string): Promise<string> {
+  try {
+    const url = new URL(sourceUrl);
+    const path = url.pathname.split("/");
+    if (url.hostname !== "news.google.com" || path[path.length - 2] !== "articles") {
+      return sourceUrl;
+    }
+
+    const base64 = path[path.length - 1];
+
+    // Old style: 직접 base64 디코딩
+    try {
+      const padded = base64.replace(/-/g, "+").replace(/_/g, "/");
+      const pad = 4 - (padded.length % 4);
+      const padded2 = pad !== 4 ? padded + "=".repeat(pad) : padded;
+      const bytes = Buffer.from(padded2, "base64");
+      let str = bytes.toString("binary");
+
+      const prefix = Buffer.from([0x08, 0x13, 0x22]).toString("binary");
+      if (str.startsWith(prefix)) str = str.substring(prefix.length);
+      const suffix = Buffer.from([0xd2, 0x01, 0x00]).toString("binary");
+      if (str.endsWith(suffix)) str = str.substring(0, str.length - suffix.length);
+
+      const byteArr = Uint8Array.from(str, c => c.charCodeAt(0));
+      const len = byteArr[0];
+      const extracted = len >= 0x80
+        ? str.substring(2, len + 2)
+        : str.substring(1, len + 1);
+
+      if (!extracted.startsWith("AU_yqL") && extracted.startsWith("http")) {
+        return extracted;
+      }
+    } catch { /* fall through to batchexecute */ }
+
+    // New style: batchexecute API
+    const body = `f.req=${encodeURIComponent(`[[["Fbv4je","[\\"garturlreq\\",[[[],[\\"en-US\\",\\"US\\"],null,[2,3,4,5],null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,true,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],null,\\"${base64}\\"]",null,"generic"]]`)}`;
+
+    const res = await fetch(
+      "https://news.google.com/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+          "Referer": "https://news.google.com/",
+          "User-Agent": "Mozilla/5.0 Chrome/125.0",
+        },
+        body,
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    const text = await res.text();
+    const header = '["garturlres","';
+    const start = text.indexOf(header);
+    if (start === -1) return sourceUrl;
+    const urlStart = text.substring(start + header.length);
+    const decoded = urlStart.substring(0, urlStart.indexOf('",'));
+    return decoded || sourceUrl;
+  } catch { return sourceUrl; }
+}
+
+/** 기사 URL에서 og:image 추출 */
 async function fetchOgImage(url: string): Promise<string | null> {
   if (!url) return null;
   try {
     const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36";
 
-    // Google News URL은 리다이렉트 따라가기
+    // Google News URL → 실제 URL 디코딩
     let finalUrl = url;
     if (url.includes("news.google.com")) {
-      const r = await fetch(url, {
-        headers: { "User-Agent": UA },
-        redirect: "follow",
-        signal: AbortSignal.timeout(5000),
-      });
-      finalUrl = r.url; // 최종 리다이렉트 URL
-      if (finalUrl.includes("news.google.com")) return null; // 리다이렉트 안 된 경우
+      finalUrl = await decodeGoogleNewsUrl(url);
+      if (finalUrl.includes("news.google.com")) return null;
     }
 
     const res = await fetch(finalUrl, {
       headers: { "User-Agent": UA },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) return null;
     const html = await res.text();
 
-    // og:image 추출
     const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
     if (ogImage?.[1]) return ogImage[1];
 
-    // twitter:image fallback
     const twImage = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
     if (twImage?.[1]) return twImage[1];
@@ -184,12 +238,10 @@ export async function notifyImportantArticle(article: TelegramArticle, force = f
     onepiece: "https://en.onepiece-cardgame.com/images/top/key_visual.jpg",
   };
 
-  // 이미지 + 포맷 병렬 생성
+  // 이미지 + 포맷 병렬 생성 (Google News URL도 디코딩해서 실제 이미지 추출)
   const [fmt, fetchedImage] = await Promise.all([
     generateTelegramFormat(article),
-    article.imageUrl ?? (article.sourceUrl && !article.sourceUrl.includes("news.google.com")
-      ? fetchOgImage(article.sourceUrl)
-      : null),
+    article.imageUrl ?? (article.sourceUrl ? fetchOgImage(article.sourceUrl) : null),
   ]);
   const imageUrl = fetchedImage ?? DEFAULT_IMAGES[article.category] ?? null;
 
