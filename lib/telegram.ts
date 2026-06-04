@@ -110,6 +110,30 @@ async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   } catch { return send(payload); }
 }
 
+/** DuckDuckGo로 기사 제목 검색 → 실제 기사 URL 찾기 */
+async function findArticleUrlByTitle(title: string): Promise<string | null> {
+  try {
+    // 제목에서 소스명 제거 (예: "Title - PokeBeach" → "Title")
+    const cleanTitle = title.replace(/\s*[-—|]\s*\S+$/, "").trim().slice(0, 80);
+    const q = encodeURIComponent(cleanTitle);
+    const r = await fetch(`https://html.duckduckgo.com/html/?q=${q}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!r.ok) return null;
+    const html = await r.text();
+    // 결과에서 첫 번째 외부 URL 추출
+    const urlMatch = html.match(/class="result__url"[^>]*>([^<\s]+)/);
+    if (!urlMatch) return null;
+    const url = "https://" + urlMatch[1].trim();
+    if (url.includes("google.com") || url.includes("bing.com") || url.includes("duckduckgo.com")) return null;
+    return url;
+  } catch { return null; }
+}
+
 /** Google News URL → 실제 기사 URL 디코딩 (batchexecute API) */
 async function decodeGoogleNewsUrl(sourceUrl: string): Promise<string> {
   try {
@@ -171,36 +195,46 @@ async function decodeGoogleNewsUrl(sourceUrl: string): Promise<string> {
   } catch { return sourceUrl; }
 }
 
-/** 기사 URL에서 og:image 추출 */
-async function fetchOgImage(url: string): Promise<string | null> {
-  if (!url) return null;
+/** URL에서 og:image 추출 */
+async function extractOgImage(url: string): Promise<string | null> {
   try {
     const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36";
-
-    // Google News URL → 실제 URL 디코딩
-    let finalUrl = url;
-    if (url.includes("news.google.com")) {
-      finalUrl = await decodeGoogleNewsUrl(url);
-      if (finalUrl.includes("news.google.com")) return null;
-    }
-
-    const res = await fetch(finalUrl, {
-      headers: { "User-Agent": UA },
-      signal: AbortSignal.timeout(6000),
-    });
+    const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
     const html = await res.text();
-
     const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
     if (ogImage?.[1]) return ogImage[1];
-
     const twImage = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
-    if (twImage?.[1]) return twImage[1];
-
-    return null;
+    return twImage?.[1] ?? null;
   } catch { return null; }
+}
+
+/** 기사 URL에서 og:image 추출 (Google News URL이면 실제 URL 먼저 찾기) */
+async function fetchOgImage(url: string, title?: string): Promise<string | null> {
+  if (!url) return null;
+
+  // Google News URL → 여러 방법으로 실제 URL 찾기
+  if (url.includes("news.google.com")) {
+    // 1. batchexecute 디코딩 시도
+    const decoded = await decodeGoogleNewsUrl(url);
+    if (!decoded.includes("news.google.com")) {
+      const img = await extractOgImage(decoded);
+      if (img) return img;
+    }
+    // 2. 제목으로 DuckDuckGo 검색
+    if (title) {
+      const found = await findArticleUrlByTitle(title);
+      if (found) {
+        const img = await extractOgImage(found);
+        if (img) return img;
+      }
+    }
+    return null;
+  }
+
+  return extractOgImage(url);
 }
 
 /** Claude로 텔레그램용 구조화 포맷 실시간 생성 (DB 저장 안 함) */
@@ -235,10 +269,10 @@ export async function notifyImportantArticle(article: TelegramArticle, force = f
   // 기본 카테고리 이미지 — 이미지 못 찾으면 사용 안 함 (텍스트만 발송)
   const DEFAULT_IMAGES: Record<string, string> = {};
 
-  // 이미지 + 포맷 병렬 생성 (Google News URL도 디코딩해서 실제 이미지 추출)
+  // 이미지 + 포맷 병렬 생성
   const [fmt, fetchedImage] = await Promise.all([
     generateTelegramFormat(article),
-    article.imageUrl ?? (article.sourceUrl ? fetchOgImage(article.sourceUrl) : null),
+    article.imageUrl ?? (article.sourceUrl ? fetchOgImage(article.sourceUrl, article.title) : null),
   ]);
   const imageUrl = fetchedImage ?? DEFAULT_IMAGES[article.category] ?? null;
 
