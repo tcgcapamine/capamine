@@ -78,7 +78,8 @@ const IMPORTANT_KEYWORDS = [
   "op-16", "op-17", "sp 카드", "sec", "30주년", "30th",
 ];
 
-export function isImportantArticle(article: TelegramArticle): boolean {
+export function isImportantArticle(article: TelegramArticle, force = false): boolean {
+  if (force) return true;
   const text = `${article.title} ${article.summary ?? ""} ${article.tags ?? ""}`.toLowerCase();
   return IMPORTANT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
@@ -171,8 +172,8 @@ async function generateTelegramFormat(article: TelegramArticle): Promise<{ bulle
 }
 
 /** 중요 기사 알림 — Claude가 발송 시점에 포맷 생성 (DB 수정 없음) */
-export async function notifyImportantArticle(article: TelegramArticle): Promise<boolean> {
-  if (!isImportantArticle(article)) return false;
+export async function notifyImportantArticle(article: TelegramArticle, force = false): Promise<boolean> {
+  if (!force && !isImportantArticle(article)) return false;
 
   const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;

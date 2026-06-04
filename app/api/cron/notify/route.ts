@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { notifyImportantArticle, sendDailySummary } from "@/lib/telegram";
+import { notifyImportantArticle, sendDailySummary, isImportantArticle } from "@/lib/telegram";
 
 // 매일 오전 8시 (UTC 23시) 실행 — 일일 요약 + 중요 기사 알림
 export async function GET(req: NextRequest) {
@@ -12,21 +12,25 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode") ?? "summary";
   const limit = parseInt(url.searchParams.get("limit") ?? "20");
+  const test = url.searchParams.get("test") === "true"; // 중요도 체크 없이 강제 발송
 
   try {
     if (mode === "important") {
-      // 최근 1시간 내 수집된 중요 기사 알림
-      const since = new Date(Date.now() - 1000 * 60 * 70); // 70분 전
+      // test=true면 최근 기사에서 그냥 가져오기, 아니면 70분 내
+      const since = test
+        ? new Date(Date.now() - 1000 * 60 * 60 * 24 * 7) // 7일
+        : new Date(Date.now() - 1000 * 60 * 70);
       const recent = await prisma.article.findMany({
         where: { isPublished: true, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: limit,
         select: { id: true, title: true, summary: true, content: true, category: true, source: true, sourceUrl: true },
       });
 
       let notified = 0;
-      for (const article of recent.slice(0, limit)) {
-        const sent = await notifyImportantArticle(article);
+      for (const article of recent) {
+        // test 모드에서는 중요도 체크 스킵
+        const sent = await notifyImportantArticle(article, test);
         if (sent) notified++;
       }
 
