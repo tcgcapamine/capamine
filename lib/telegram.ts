@@ -1,9 +1,16 @@
 /**
- * 텔레그램 봇 알림 — 개선된 포맷 + 이미지 지원
+ * 텔레그램 봇 알림 — 프리미엄 이모지 + entities 방식
  */
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID ?? "";
+
+// 프리미엄 이모지 ID
+const EMOJI = {
+  STAR:  { char: "⭐",  id: "6143251942928818741" },  // ⭐ (length 1)
+  CHECK: { char: "✔️", id: "5895222507912302025" },  // ✔️ (length 2)
+  ARROW: { char: "➡️", id: "5215330331711775720" },  // ➡️ (length 2)
+};
 
 export interface TelegramArticle {
   id: string;
@@ -16,21 +23,58 @@ export interface TelegramArticle {
   tags?: string | null;
 }
 
+interface TelegramEntity {
+  offset: number;
+  length: number;
+  type: string;
+  url?: string;
+  custom_emoji_id?: string;
+}
+
+/** 메시지 빌더 — 텍스트와 entities를 동시에 구성 */
+class MsgBuilder {
+  private parts: string[] = [];
+  private ents: TelegramEntity[] = [];
+  get offset() { return this.parts.join("").length; }
+
+  add(text: string) { this.parts.push(text); return this; }
+  nl(n = 1) { return this.add("\n".repeat(n)); }
+
+  bold(text: string) {
+    this.ents.push({ offset: this.offset, length: text.length, type: "bold" });
+    return this.add(text);
+  }
+
+  link(text: string, url: string) {
+    this.ents.push({ offset: this.offset, length: text.length, type: "text_link", url });
+    return this.add(text);
+  }
+
+  emoji(e: { char: string; id: string }, alsoBold = false) {
+    const len = e.char.length;
+    if (alsoBold) this.ents.push({ offset: this.offset, length: len, type: "bold" });
+    this.ents.push({ offset: this.offset, length: len, type: "custom_emoji", custom_emoji_id: e.id });
+    return this.add(e.char);
+  }
+
+  build() { return { text: this.parts.join(""), entities: this.ents }; }
+}
+
+function getCatLabel(category: string) {
+  if (category === "pokemon") return "POKÉMON TCG";
+  if (category === "onepiece") return "ONE PIECE TCG";
+  return "TCG NEWS";
+}
+
+/** 중요 기사 판단 */
 const IMPORTANT_KEYWORDS = [
-  // 발매/신제품
-  "새로운", "신카드", "공개", "발매", "출시", "공식 발표", "새 세트", "신규",
+  "새로운", "신카드", "공개", "발매", "출시", "공식 발표", "신규",
   "new set", "reveal", "official", "release", "expansion", "announced",
-  "新弾", "新カード", "公式", "発売", "新商品",
-  // 레어 카드
-  "sar", "ur", "secret", "special illustration", "초희귀", "울트라레어",
-  // 가격 관련
-  "최고가", "신고가", "폭등", "폭락", "가격 상승", "30만", "50만", "100만",
-  // 대회
-  "세계대회", "챔피언십", "우승", "world championship", "regional",
-  // 원피스
-  "op-16", "op-17", "sp 카드", "sec 카드", "정상결전",
-  // 포켓몬 30주년
-  "30주년", "30th", "30 celebration",
+  "新弾", "新カード", "公式", "発売",
+  "sar", "ur", "secret", "special illustration",
+  "최고가", "신고가", "폭등", "폭락",
+  "세계대회", "챔피언십", "우승", "world championship",
+  "op-16", "op-17", "sp 카드", "sec", "30주년", "30th",
 ];
 
 export function isImportantArticle(article: TelegramArticle): boolean {
@@ -38,96 +82,74 @@ export function isImportantArticle(article: TelegramArticle): boolean {
   return IMPORTANT_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
-/** 카테고리 표시 */
-function getCatInfo(category: string) {
-  if (category === "pokemon") return { emoji: "🎴", label: "POKÉMON TCG", color: "🟠" };
-  if (category === "onepiece") return { emoji: "☠️", label: "ONE PIECE TCG", color: "🔴" };
-  return { emoji: "📋", label: "TCG NEWS", color: "🔵" };
-}
-
-/** 텍스트 메시지 전송 */
-async function sendMessage(text: string): Promise<boolean> {
+/** 텔레그램 API 전송 (entities 방식) */
+async function send(payload: object): Promise<boolean> {
   if (!BOT_TOKEN || !CHANNEL_ID) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: CHANNEL_ID,
-        text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify({ chat_id: CHANNEL_ID, disable_web_page_preview: false, ...payload }),
     });
     return res.ok;
   } catch { return false; }
 }
 
-/** 이미지 + 캡션 전송 */
-async function sendPhoto(imageUrl: string, caption: string): Promise<boolean> {
+async function sendPhoto(imageUrl: string, payload: object): Promise<boolean> {
   if (!BOT_TOKEN || !CHANNEL_ID) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: CHANNEL_ID,
-        photo: imageUrl,
-        caption,
-        parse_mode: "HTML",
-      }),
+      body: JSON.stringify({ chat_id: CHANNEL_ID, photo: imageUrl, ...payload }),
     });
     if (res.ok) return true;
-    // 이미지 전송 실패 시 텍스트로 fallback
-    return sendMessage(caption);
-  } catch {
-    return sendMessage(caption);
-  }
+    return send(payload); // fallback
+  } catch { return send(payload); }
 }
 
 /** 중요 기사 알림 */
 export async function notifyImportantArticle(article: TelegramArticle): Promise<boolean> {
   if (!isImportantArticle(article)) return false;
 
-  const cat = getCatInfo(article.category);
+  const label = getCatLabel(article.category);
   const articleUrl = `https://capamine.vercel.app/articles/${article.id}`;
+  const tags = article.tags
+    ? article.tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 4)
+    : [];
 
-  // 태그를 ✔️ 불릿 포인트로
-  const tagBullets = article.tags
-    ? article.tags.split(",").slice(0, 4)
-        .map(t => t.trim()).filter(Boolean)
-        .map(t => `✔️ ${t}`)
-        .join("\n")
-    : "";
+  const b = new MsgBuilder();
 
-  const lines = [
-    `⚡ <b>${cat.label} · 주요 소식</b>`,
-    ``,
-    `<b>${article.title}</b>`,
-  ];
+  // ⭐ POKÉMON TCG · 주요 소식
+  b.emoji(EMOJI.STAR).bold(` ${label} · 주요 소식`).nl(2);
 
-  if (tagBullets) {
-    lines.push("", tagBullets);
+  // 제목 (볼드)
+  b.bold(article.title).nl();
+
+  // ✔️ 태그 불릿
+  for (const tag of tags) {
+    b.emoji(EMOJI.CHECK, true).bold(` ${tag}`).nl();
   }
 
+  // 요약
   if (article.summary) {
-    lines.push("", article.summary);
+    b.nl().add(article.summary).nl();
   }
 
-  lines.push(
-    ``,
-    `─────────────────────`,
-    `➡️ <a href="${articleUrl}">카파민에서 자세히 보기</a>`,
-  );
+  // 구분선 + 링크
+  b.nl()
+    .add("─────────────────────").nl()
+    .emoji(EMOJI.ARROW).link(` 카파민에서 자세히 보기`, articleUrl).nl();
 
   if (article.sourceUrl) {
-    lines.push(`➡️ <a href="${article.sourceUrl}">원문 바로가기</a>`);
+    b.emoji(EMOJI.ARROW).link(` 원문 바로가기`, article.sourceUrl);
   }
 
-  const text = lines.join("\n");
+  const { text, entities } = b.build();
+  const payload = { text, entities };
 
-  if (article.imageUrl) return sendPhoto(article.imageUrl, text);
-  return sendMessage(text);
+  if (article.imageUrl) return sendPhoto(article.imageUrl, { caption: text, caption_entities: entities });
+  return send(payload);
 }
 
 /** 일일 요약 */
@@ -138,36 +160,32 @@ export async function sendDailySummary(articles: TelegramArticle[]): Promise<boo
   const op = articles.filter(a => a.category === "onepiece").slice(0, 4);
   const today = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
 
-  const lines = [
-    `📊 <b>카파민 일일 뉴스 브리핑</b>`,
-    `<i>${today}</i>`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-  ];
+  const b = new MsgBuilder();
+  b.bold(`📊 카파민 일일 뉴스 브리핑`).nl()
+   .add(`${today}`).nl()
+   .add("━━━━━━━━━━━━━━━━━━━━").nl();
 
   if (pk.length > 0) {
-    lines.push(``, `🎴 <b>포켓몬 카드게임</b>`);
-    pk.forEach((a, i) => {
-      lines.push(`${["①","②","③","④"][i]} ${a.title}`);
+    b.nl().bold("🎴 포켓몬 카드게임").nl();
+    ["①","②","③","④"].slice(0, pk.length).forEach((n, i) => {
+      b.add(`${n} ${pk[i].title}`).nl();
     });
   }
 
   if (op.length > 0) {
-    lines.push(``, `☠️ <b>원피스 카드게임</b>`);
-    op.forEach((a, i) => {
-      lines.push(`${["①","②","③","④"][i]} ${a.title}`);
+    b.nl().bold("☠️ 원피스 카드게임").nl();
+    ["①","②","③","④"].slice(0, op.length).forEach((n, i) => {
+      b.add(`${n} ${op[i].title}`).nl();
     });
   }
 
-  lines.push(
-    ``,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `<a href="https://capamine.vercel.app">🌐 카파민 전체 뉴스 보기</a>`
-  );
+  b.nl().add("━━━━━━━━━━━━━━━━━━━━").nl()
+   .link("🌐 카파민 전체 뉴스 보기", "https://capamine.vercel.app");
 
-  return sendMessage(lines.join("\n"));
+  const { text, entities } = b.build();
+  return send({ text, entities });
 }
 
-/** 텔레그램 직접 메시지 (외부 사용) */
 export async function sendTelegramMessage(text: string): Promise<boolean> {
-  return sendMessage(text);
+  return send({ text, parse_mode: "HTML" });
 }
