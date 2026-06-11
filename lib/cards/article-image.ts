@@ -75,6 +75,7 @@ export async function findPokemonCardImage(
     { pattern: /chaos rising|카오스/i, query: "set.name:\"Chaos Rising\"" },
     { pattern: /ascended heroes/i, query: "set.name:\"Ascended Heroes\"" },
     { pattern: /mega evolution|메가 에볼루션/i, query: "set.series:\"Mega Evolution\"" },
+    { pattern: /prize pack|프라이즈 팩/i, query: "set.name:\"Prize Pack\"" },
   ];
 
   for (const { pattern, query } of setMatches) {
@@ -93,6 +94,19 @@ export async function findPokemonCardImage(
       } catch { continue; }
     }
   }
+
+  // 어떤 포켓몬 기사든 — 최신 SAR 카드 이미지를 기본으로 사용
+  try {
+    const res = await fetch(
+      `https://api.pokemontcg.io/v2/cards?q=rarity:%22Special+Illustration+Rare%22&pageSize=1&orderBy=-set.releaseDate`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (res.ok) {
+      const data = await res.json() as { data: TCGCard[] };
+      const card = data.data?.[0];
+      if (card?.images?.large) return card.images.large;
+    }
+  } catch {}
 
   return null;
 }
