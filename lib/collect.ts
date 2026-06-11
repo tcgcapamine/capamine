@@ -4,6 +4,7 @@ import { fetchRss, type FetchedItem } from "./sources/rss";
 import { fetchScrape } from "./sources/scrape";
 import { translateArticle } from "./translate";
 import { notifyImportantArticle } from "./telegram";
+import { findPokemonCardImage } from "./cards/article-image";
 
 export interface CollectResult {
   source: string;
@@ -96,10 +97,17 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   const excludeKeywords = ["pokémon go", "pokemon go", "포켓몬 go", "anime", "アニメ", "movie", "영화", "nintendo switch", "carplay", "android auto", "playlist", "music"];
   if (excludeKeywords.some(kw => lowerTitle.includes(kw))) return "skipped";
 
-  // 이미지 미리 가져오기 (로컬 실행 시)
+  // 이미지 미리 가져오기
   let imageUrl = item.imageUrl ?? null;
   if (!imageUrl && process.env.FETCH_IMAGES === "true") {
-    imageUrl = await fetchImageForArticle(item.url || null, title);
+    // 포켓몬 기사: TCG API 카드 이미지 우선
+    if (item.category === "pokemon") {
+      imageUrl = await findPokemonCardImage(title, tags, summary);
+    }
+    // 그래도 없으면 og:image 시도
+    if (!imageUrl) {
+      imageUrl = await fetchImageForArticle(item.url || null, title);
+    }
   }
 
   const saved = await prisma.article.create({
