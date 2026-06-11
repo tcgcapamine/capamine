@@ -20,6 +20,48 @@ export interface CollectSummary {
   durationMs: number;
 }
 
+/** 수집 시 og:image 미리 가져오기 (로컬 실행 시 타임아웃 없음) */
+async function fetchImageForArticle(sourceUrl: string | null, title: string): Promise<string | null> {
+  if (!sourceUrl) return null;
+  try {
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0";
+
+    // Google News URL → DuckDuckGo로 실제 URL 찾기
+    let fetchUrl = sourceUrl;
+    if (sourceUrl.includes("news.google.com")) {
+      const q = encodeURIComponent(title.replace(/\s*[-—|]\s*\S+$/, "").trim().slice(0, 80));
+      const r = await fetch(`https://html.duckduckgo.com/html/?q=${q}`, {
+        headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (r.ok) {
+        const html = await r.text();
+        const urlMatch = html.match(/class="result__url"[^>]*>([^<\s]+)/);
+        if (urlMatch) {
+          const found = "https://" + urlMatch[1].trim();
+          if (!found.includes("google.com") && !found.includes("duckduckgo.com")) {
+            fetchUrl = found;
+          }
+        }
+      }
+    }
+
+    if (fetchUrl.includes("news.google.com")) return null;
+
+    const res = await fetch(fetchUrl, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (og?.[1]) return og[1];
+
+    const tw = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+    return tw?.[1] ?? null;
+  } catch { return null; }
+}
+
 async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "error"> {
   // URL 기반 중복 체크
   if (item.url) {
@@ -34,55 +76,58 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
   let publishedAt = item.publishedAt;
 
   // 한국어가 아니면 Claude로 번역 + 날짜 파싱
-  if (item.lang !== "ko" && process.env.ANTHROPIC_API_KEY) {
+  if (item.lang !== "ko" && process.env.ANTHROPIC_API_KEY && !process.env.NO_TRANSLATE) {
     try {
       const translated = await translateArticle(title, content, item.lang as "en" | "ja", item.publishedAt);
       title       = translated.title;
       summary     = translated.summary;
       content     = translated.content;
       tags        = translated.tags;
-      // 본문/제목에서 실제 날짜를 파싱했으면 사용
       if (translated.publishedAt) publishedAt = translated.publishedAt;
     } catch (err) {
       console.error("[Translate] failed:", err);
     }
   }
 
-  // 제목이 너무 짧으면 저장 안 함
   if (!title || title.length < 5) return "skipped";
 
-  // TCG 무관 키워드 필터 (포켓몬 GO, 애니, 게임 등 카드게임과 무관한 기사 제외)
+  // TCG 무관 키워드 필터
   const lowerTitle = title.toLowerCase();
   const excludeKeywords = ["pokémon go", "pokemon go", "포켓몬 go", "anime", "アニメ", "movie", "영화", "nintendo switch", "carplay", "android auto", "playlist", "music"];
   if (excludeKeywords.some(kw => lowerTitle.includes(kw))) return "skipped";
 
+  // 이미지 미리 가져오기 (로컬 실행 시)
+  let imageUrl = item.imageUrl ?? null;
+  if (!imageUrl && process.env.FETCH_IMAGES === "true") {
+    imageUrl = await fetchImageForArticle(item.url || null, title);
+  }
+
   const saved = await prisma.article.create({
     data: {
-      title,
-      summary,
-      content,
+      title, summary, content,
       category: item.category,
       source: item.source,
       sourceUrl: item.realSourceUrl || item.url || null,
       tags: tags || null,
-      imageUrl: item.imageUrl ?? null,
+      imageUrl,
       isPublished: true,
-      publishedAt: publishedAt,
+      publishedAt,
     },
   });
 
-  // 중요 기사 텔레그램 알림 (비동기, 실패해도 무시)
+  // 중요 기사 텔레그램 알림 (비동기)
   notifyImportantArticle({
-    id: saved.id, title, summary, category: item.category,
-    source: item.source, sourceUrl: item.url || null,
+    id: saved.id, title, summary, content,
+    category: item.category,
+    source: item.source,
+    sourceUrl: item.url || null,
+    imageUrl,
   }).catch(() => {});
 
   return "saved";
 }
 
-async function collectSource(
-  src: RssSource | ScrapeSource,
-): Promise<CollectResult> {
+async function collectSource(src: RssSource | ScrapeSource): Promise<CollectResult> {
   const result: CollectResult = {
     source: src.name,
     type: src.type,
@@ -91,9 +136,7 @@ async function collectSource(
 
   let items: FetchedItem[] = [];
   try {
-    items = src.type === "rss"
-      ? await fetchRss(src)
-      : await fetchScrape(src);
+    items = src.type === "rss" ? await fetchRss(src) : await fetchScrape(src);
   } catch (err) {
     result.errors.push(String(err));
     return result;
@@ -109,7 +152,6 @@ async function collectSource(
       result.errors.push(String(err));
     }
   }
-
   return result;
 }
 
@@ -131,7 +173,6 @@ export async function collectAll(categories?: string[]): Promise<CollectSummary>
   };
 }
 
-// 단일 소스 수집 (이름으로 찾아서 실행)
 export async function collectByName(name: string): Promise<CollectResult | null> {
   const src = NEWS_SOURCES.find((s) => s.name === name);
   if (!src) return null;
