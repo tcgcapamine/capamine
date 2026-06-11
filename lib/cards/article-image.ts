@@ -95,18 +95,6 @@ export async function findPokemonCardImage(
     }
   }
 
-  // 어떤 포켓몬 기사든 — 최신 SAR 카드 이미지를 기본으로 사용
-  try {
-    const res = await fetch(
-      `https://api.pokemontcg.io/v2/cards?q=rarity:%22Special+Illustration+Rare%22&pageSize=1&orderBy=-set.releaseDate`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (res.ok) {
-      const data = await res.json() as { data: TCGCard[] };
-      const card = data.data?.[0];
-      if (card?.images?.large) return card.images.large;
-    }
-  } catch {}
-
+  // 기사 내용과 무관한 카드 이미지는 쓰지 않음 — null 반환
   return null;
 }
