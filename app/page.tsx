@@ -16,9 +16,9 @@ const C = {
 };
 
 const CAT = {
-  pokemon:  { color: C.pk,   dim: C.pkDim,   label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
-  onepiece: { color: C.op,   dim: C.opDim,   label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
-  general:  { color: C.cyan, dim: C.cyanDim, label: "NEWS",      emoji: "📋",  href: "/" },
+  pokemon:  { color: C.pk,    dim: C.pkDim,    label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
+  onepiece: { color: C.op,    dim: C.opDim,    label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
+  general:  { color: C.green, dim: "#001a0f",  label: "TCG NEWS",  emoji: "🃏",  href: "/tcg" },
 };
 const catOf = (k: string) => CAT[k as keyof typeof CAT] ?? CAT.general;
 
@@ -212,14 +212,15 @@ function SectionHeader({ label, accent, href, count }: { label: string; accent: 
 export default async function HomePage() {
   const now = new Date();
 
-  const [pokeArticles, opArticles, prices, events] = await Promise.all([
+  const [pokeArticles, opArticles, tcgArticles, prices, events] = await Promise.all([
     prisma.article.findMany({ where: { isPublished: true, category: "pokemon" }, orderBy: { publishedAt: "desc" }, take: 8, select: { id: true, title: true, summary: true, source: true, publishedAt: true, createdAt: true, category: true } }),
     prisma.article.findMany({ where: { isPublished: true, category: "onepiece" }, orderBy: { publishedAt: "desc" }, take: 8, select: { id: true, title: true, summary: true, source: true, publishedAt: true, createdAt: true, category: true } }),
+    prisma.article.findMany({ where: { isPublished: true, category: "general" }, orderBy: { publishedAt: "desc" }, take: 6, select: { id: true, title: true, summary: true, source: true, publishedAt: true, createdAt: true, category: true } }),
     prisma.cardPrice.findMany({ orderBy: { price: "desc" }, take: 10 }),
     prisma.releaseEvent.findMany({ where: { releaseDate: { gte: now } }, orderBy: { releaseDate: "asc" }, take: 7 }),
   ]);
 
-  const all = [...pokeArticles, ...opArticles].sort(
+  const all = [...pokeArticles, ...opArticles, ...tcgArticles].sort(
     (a, b) => new Date(b.publishedAt ?? b.createdAt).getTime() - new Date(a.publishedAt ?? a.createdAt).getTime()
   );
   const hero = all[0];
@@ -227,6 +228,7 @@ export default async function HomePage() {
 
   const pokeNews = pokeArticles.filter(a => a.id !== heroId);
   const opNews   = opArticles.filter(a => a.id !== heroId);
+  const tcgNews  = tcgArticles.filter(a => a.id !== heroId);
   const tickerArticles = all.slice(0, 14);
 
   const pkPrices = prices.filter(p => p.category === "pokemon").slice(0, 6);
@@ -341,7 +343,36 @@ export default async function HomePage() {
               </section>
             )}
 
-            {pokeNews.length === 0 && opNews.length === 0 && (
+            {/* TCG 뉴스 섹션 */}
+            {tcgNews.length > 0 && (
+              <section>
+                <SectionHeader label="TCG 뉴스" accent={C.green} href="/tcg" count={tcgNews.length} />
+                <div>
+                  <Link href={`/articles/${tcgNews[0].id}`} style={{ textDecoration: "none", display: "block" }}>
+                    <div style={{ padding: "24px 0 20px", borderBottom: `1px solid ${C.bd}` }} className="article-row">
+                      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
+                        <span className="f-display" style={{ fontSize: "9px", fontWeight: 900, color: C.green, letterSpacing: "0.18em" }}>🃏 TCG NEWS</span>
+                        {tcgNews[0].source && <span style={{ fontSize: "11px", color: C.text3 }}>· {tcgNews[0].source}</span>}
+                        <span style={{ fontSize: "11px", color: C.text3 }}>· {timeAgo(tcgNews[0])}</span>
+                      </div>
+                      <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, lineHeight: 1.4, marginBottom: "10px" }}>
+                        {tcgNews[0].title}
+                      </h2>
+                      {tcgNews[0].summary && (
+                        <p className="line-clamp-2" style={{ fontSize: "14px", color: C.text2, lineHeight: 1.8 }}>
+                          {tcgNews[0].summary}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                  {tcgNews.slice(1, 5).map((a, i) => (
+                    <ArticleItem key={a.id} article={a} accent={C.green} rank={i + 1} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {pokeNews.length === 0 && opNews.length === 0 && tcgNews.length === 0 && (
               <div style={{ textAlign: "center", padding: "80px 0", color: C.text3 }}>
                 <p style={{ fontSize: "14px" }}>수집된 기사가 없습니다.</p>
               </div>

@@ -64,18 +64,34 @@ class MsgBuilder {
 function getCatLabel(category: string) {
   if (category === "pokemon") return "POKÉMON TCG";
   if (category === "onepiece") return "ONE PIECE TCG";
+  if (category === "general") return "TCG NEWS";
   return "TCG NEWS";
 }
 
 /** 중요 기사 판단 */
 const IMPORTANT_KEYWORDS = [
+  // 공통
   "새로운", "신카드", "공개", "발매", "출시", "공식 발표", "신규",
   "new set", "reveal", "official", "release", "expansion", "announced",
   "新弾", "新カード", "公式", "発売",
-  "sar", "ur", "secret", "special illustration",
   "최고가", "신고가", "폭등", "폭락",
   "세계대회", "챔피언십", "우승", "world championship",
-  "op-16", "op-17", "sp 카드", "sec", "30주년", "30th",
+  // 포켓몬 TCG
+  "sar", "ur", "secret", "special illustration",
+  "30주년", "30th",
+  // 원피스 TCG
+  "op-16", "op-17", "op-18", "sec 카드", "sp 카드",
+  "리더 카드", "돈 카드", "새 탄", "신탄",
+  "정상결전", "새 세트", "원피스 카드 공식",
+  "leaders", "don!!", "booster pack",
+  // General TCG (나루토, 유희왕, 드래곤볼, 디지몬, MTG)
+  "naruto card", "나루토 카드", "ナルトカード",
+  "yu-gi-oh", "유희왕", "遊戯王", "master duel", "ban list",
+  "dragon ball", "드래곤볼",
+  "digimon card", "디지몬 카드",
+  "magic the gathering", "mtg", "매직 더 게더링",
+  "새로운 tcg", "신규 tcg", "new tcg", "card game announced",
+  "bushiroad", "부시로드",
 ];
 
 export function isImportantArticle(article: TelegramArticle, force = false): boolean {
@@ -311,8 +327,9 @@ export async function notifyImportantArticle(article: TelegramArticle, force = f
 export async function sendDailySummary(articles: TelegramArticle[]): Promise<boolean> {
   if (articles.length === 0) return false;
 
-  const pk = articles.filter(a => a.category === "pokemon").slice(0, 4);
-  const op = articles.filter(a => a.category === "onepiece").slice(0, 4);
+  const pk  = articles.filter(a => a.category === "pokemon").slice(0, 4);
+  const op  = articles.filter(a => a.category === "onepiece").slice(0, 4);
+  const tcg = articles.filter(a => a.category === "general").slice(0, 3);
   const today = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
 
   const b = new MsgBuilder();
@@ -331,6 +348,13 @@ export async function sendDailySummary(articles: TelegramArticle[]): Promise<boo
     b.nl().bold("☠️ 원피스 카드게임").nl();
     ["①","②","③","④"].slice(0, op.length).forEach((n, i) => {
       b.add(`${n} ${op[i].title}`).nl();
+    });
+  }
+
+  if (tcg.length > 0) {
+    b.nl().bold("🃏 TCG 뉴스").nl();
+    ["①","②","③"].slice(0, tcg.length).forEach((n, i) => {
+      b.add(`${n} ${tcg[i].title}`).nl();
     });
   }
 

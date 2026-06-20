@@ -23,14 +23,13 @@ export async function GET(req: NextRequest) {
       const recent = await prisma.article.findMany({
         where: { isPublished: true, createdAt: { gte: since } },
         orderBy: { createdAt: "desc" },
-        take: 50,
-        select: { id: true, title: true, summary: true, content: true, category: true, source: true, sourceUrl: true, imageUrl: true },
+        take: 100,
+        select: { id: true, title: true, summary: true, content: true, category: true, source: true, sourceUrl: true, imageUrl: true, tags: true },
       });
 
       // 중복 제거: 비슷한 제목의 기사는 첫 번째만 사용
       const seen = new Set<string>();
       const deduped = recent.filter(a => {
-        // 제목 앞 20글자로 중복 체크
         const key = a.title.slice(0, 20).toLowerCase().replace(/\s+/g, "");
         if (seen.has(key)) return false;
         seen.add(key);
@@ -38,9 +37,17 @@ export async function GET(req: NextRequest) {
       });
 
       // 중요 기사 필터 (test 모드면 스킵)
-      const candidates = test
-        ? deduped.slice(0, limit)
-        : deduped.filter(a => isImportantArticle(a)).slice(0, limit);
+      const important = test ? deduped : deduped.filter(a => isImportantArticle(a));
+
+      // 카테고리 균형: 포켓몬/원피스 각 floor(limit/3), general 나머지
+      const perMain = Math.max(1, Math.floor(limit / 3));
+      const pokemon = important.filter(a => a.category === "pokemon").slice(0, perMain);
+      const onepiece = important.filter(a => a.category === "onepiece").slice(0, perMain);
+      const general  = important.filter(a => a.category === "general").slice(0, perMain);
+      // 부족한 슬롯은 다른 카테고리로 채움
+      const picked = new Set([...pokemon, ...onepiece, ...general]);
+      const extra = important.filter(a => !picked.has(a)).slice(0, Math.max(0, limit - picked.size));
+      const candidates = [...pokemon, ...onepiece, ...general, ...extra].slice(0, limit);
 
       let notified = 0;
       for (const article of candidates) {

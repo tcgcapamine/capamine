@@ -8,6 +8,7 @@ const nav = [
   { href: "/",         label: "홈",       en: "HOME" },
   { href: "/pokemon",  label: "포켓몬",   en: "POKÉMON",   color: "#ff9500" },
   { href: "/onepiece", label: "원피스",   en: "ONE PIECE", color: "#e03030" },
+  { href: "/tcg",      label: "TCG 뉴스", en: "TCG",       color: "#00ffaa" },
   { href: "/calendar", label: "발매일정", en: "RELEASE" },
   { href: "/decks",    label: "덱레시피", en: "DECKS" },
   { href: "/cards",    label: "카드DB",   en: "CARDS",  color: "#00d4ff" },

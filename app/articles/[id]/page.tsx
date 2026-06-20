@@ -15,9 +15,9 @@ const C = {
 };
 
 const CAT = {
-  pokemon:  { color: C.pk,   dim: C.pkDim,  label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
-  onepiece: { color: C.op,   dim: C.opDim,  label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
-  general:  { color: C.blue, dim: "#0a1f3d", label: "GENERAL",  emoji: "📋",  href: "/" },
+  pokemon:  { color: C.pk,    dim: C.pkDim,   label: "POKÉMON",   emoji: "🎴",  href: "/pokemon" },
+  onepiece: { color: C.op,    dim: C.opDim,   label: "ONE PIECE", emoji: "☠️",  href: "/onepiece" },
+  general:  { color: "#00ffaa", dim: "#001a0f", label: "TCG NEWS",  emoji: "🃏",  href: "/tcg" },
 };
 const catOf = (k: string) => CAT[k as keyof typeof CAT] ?? CAT.general;
 

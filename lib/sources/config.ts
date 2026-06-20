@@ -1,5 +1,5 @@
 export type SourceLang = "en" | "ja" | "ko";
-export type SourceCategory = "pokemon" | "onepiece";
+export type SourceCategory = "pokemon" | "onepiece" | "general";
 
 export interface RssSource {
   type: "rss";
@@ -172,6 +172,76 @@ export const NEWS_SOURCES: NewsSource[] = [
   },
   // ワンピース公式JA 스크래퍼 제거 — 메뉴 항목만 수집되는 문제
   // 대신 Google News JA로 커버
+
+  // ─────────────────────────────────────────
+  // GENERAL TCG NEWS (나루토, 유희왕, 드래곤볼, 디지몬, MTG 등)
+  // ─────────────────────────────────────────
+
+  // 나루토 TCG (Bushiroad 2025 발표)
+  {
+    type: "rss",
+    name: "Google News · Naruto TCG (EN)",
+    url: 'https://news.google.com/rss/search?q="naruto+card+game"+OR+"naruto+tcg"+OR+"naruto+trading+card"&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+  {
+    type: "rss",
+    name: "Google News · ナルトカード (JA)",
+    url: "https://news.google.com/rss/search?q=%E3%83%8A%E3%83%AB%E3%83%88+%E3%82%AB%E3%83%BC%E3%83%89%E3%82%B2%E3%83%BC%E3%83%A0+OR+NARUTO+TCG&hl=ja&gl=JP&ceid=JP:ja",
+    category: "general", lang: "ja",
+  },
+
+  // 유희왕 (한국 시장 주요 TCG)
+  {
+    type: "rss",
+    name: "Google News · Yu-Gi-Oh (EN)",
+    url: 'https://news.google.com/rss/search?q="yu-gi-oh"+(new+set+OR+ban+list+OR+release+OR+reveal+OR+tournament+OR+master+duel)&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+  {
+    type: "rss",
+    name: "Google News · 유희왕 (KR)",
+    url: "https://news.google.com/rss/search?q=%EC%9C%A0%ED%9D%AC%EC%99%95+%EC%B9%B4%EB%93%9C&hl=ko&gl=KR&ceid=KR:ko",
+    category: "general", lang: "ko",
+  },
+
+  // 드래곤볼 슈퍼 카드게임
+  {
+    type: "rss",
+    name: "Google News · Dragon Ball TCG (EN)",
+    url: 'https://news.google.com/rss/search?q="dragon+ball+super+card+game"+OR+"dragon+ball+tcg"+(new+set+OR+release+OR+reveal+OR+tournament)&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+
+  // 디지몬 카드게임
+  {
+    type: "rss",
+    name: "Google News · Digimon TCG (EN)",
+    url: 'https://news.google.com/rss/search?q="digimon+card+game"+(new+set+OR+release+OR+reveal+OR+spoiler)&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+
+  // 매직 더 게더링
+  {
+    type: "rss",
+    name: "Google News · MTG (EN)",
+    url: 'https://news.google.com/rss/search?q="magic+the+gathering"+(new+set+OR+spoiler+OR+release+OR+ban+OR+reveal)&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+
+  // TCG 종합 (신규 발표, 업계 뉴스)
+  {
+    type: "rss",
+    name: "Google News · TCG 신규발표 (EN)",
+    url: 'https://news.google.com/rss/search?q="trading+card+game"+(new+tcg+OR+"card+game+announced"+OR+"new+card+game")+2025&hl=en-US&gl=US&ceid=US:en',
+    category: "general", lang: "en",
+  },
+  {
+    type: "rss",
+    name: "Google News · TCG 종합 (KR)",
+    url: "https://news.google.com/rss/search?q=(나루토+OR+유희왕+OR+드래곤볼+OR+디지몬)+카드게임&hl=ko&gl=KR&ceid=KR:ko",
+    category: "general", lang: "ko",
+  },
 
 ];
 

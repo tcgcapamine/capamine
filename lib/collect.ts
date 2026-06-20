@@ -94,7 +94,11 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
 
   // TCG 무관 키워드 필터
   const lowerTitle = title.toLowerCase();
-  const excludeKeywords = ["pokémon go", "pokemon go", "포켓몬 go", "anime", "アニメ", "movie", "영화", "nintendo switch", "carplay", "android auto", "playlist", "music"];
+  const baseExclude = ["pokémon go", "pokemon go", "포켓몬 go", "carplay", "android auto", "playlist", "music"];
+  // general 카테고리는 애니메/영화 언급이 있어도 카드게임 뉴스일 수 있으므로 완화
+  const excludeKeywords = item.category === "general"
+    ? baseExclude
+    : [...baseExclude, "anime", "アニメ", "movie", "영화", "nintendo switch"];
   if (excludeKeywords.some(kw => lowerTitle.includes(kw))) return "skipped";
 
   // 이미지 미리 가져오기
@@ -130,6 +134,7 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
     source: item.source,
     sourceUrl: item.url || null,
     imageUrl,
+    tags: tags || null,
   }).catch(() => {});
 
   return "saved";
