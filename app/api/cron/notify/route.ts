@@ -63,14 +63,14 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 일일 요약
+    // 일일 요약 — 카테고리별로 따로 가져와 균형 보장
     const since = new Date(Date.now() - 1000 * 60 * 60 * 24);
-    const articles = await prisma.article.findMany({
-      where: { isPublished: true, createdAt: { gte: since } },
-      orderBy: { publishedAt: "desc" },
-      take: 10,
-      select: { id: true, title: true, summary: true, category: true, source: true, sourceUrl: true },
-    });
+    const [pkSum, opSum, tcgSum] = await Promise.all([
+      prisma.article.findMany({ where: { isPublished: true, category: "pokemon",  createdAt: { gte: since } }, orderBy: { publishedAt: "desc" }, take: 4, select: { id: true, title: true, summary: true, category: true, source: true, sourceUrl: true } }),
+      prisma.article.findMany({ where: { isPublished: true, category: "onepiece", createdAt: { gte: since } }, orderBy: { publishedAt: "desc" }, take: 4, select: { id: true, title: true, summary: true, category: true, source: true, sourceUrl: true } }),
+      prisma.article.findMany({ where: { isPublished: true, category: "general",  createdAt: { gte: since } }, orderBy: { publishedAt: "desc" }, take: 3, select: { id: true, title: true, summary: true, category: true, source: true, sourceUrl: true } }),
+    ]);
+    const articles = [...pkSum, ...opSum, ...tcgSum];
 
     const sent = await sendDailySummary(articles);
     return NextResponse.json({ ok: true, mode: "summary", articles: articles.length, sent });

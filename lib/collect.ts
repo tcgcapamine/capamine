@@ -174,10 +174,9 @@ export async function collectAll(categories?: string[]): Promise<CollectSummary>
     ? NEWS_SOURCES.filter((s) => categories.includes(s.category))
     : NEWS_SOURCES;
 
-  const results: CollectResult[] = [];
-  for (const src of sources) {
-    results.push(await collectSource(src));
-  }
+  // 소스별 RSS 패치를 병렬 실행 (기사 처리는 소스 내에서 순차)
+  // 순차 실행 시 29소스 × ~500ms = ~15s → 병렬 시 ~2s
+  const results = await Promise.all(sources.map(src => collectSource(src)));
 
   return {
     results,
