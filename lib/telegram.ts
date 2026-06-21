@@ -68,24 +68,28 @@ function getCatLabel(category: string) {
   return "TCG NEWS";
 }
 
-/** 중요 기사 판단 — 진짜 중요한 것만 (너무 넓은 키워드는 스팸 원인) */
+/** 중요 기사 판단
+ *  telegramSent 플래그로 중복을 막으므로, 키워드는 적당히 포괄적으로 유지 */
 const IMPORTANT_KEYWORDS = [
-  // 가격 이상 (최우선)
+  // ── 신제품 / 카드 공개 ──
+  "공식 발표", "신카드 공개", "카드 공개", "신세트",
+  "new card", "card reveal", "new set", "new expansion", "new pack",
+  "新カード", "新弾", "新セット",
+  // ── 고희귀 레어도 ──
+  "special illustration", "sar", "hyper rare", "secret rare",
+  "sec 카드", "sp 카드",
+  // ── 가격 이슈 ──
   "최고가", "신고가", "폭등", "폭락", "역대 최고",
-  // 대회 결과
-  "세계대회", "월드챔피언십", "world championship", "챔피언십 우승",
-  // 포켓몬 고희귀 카드
-  "special illustration rare", "sar", "hyper rare",
-  // 원피스 세트 출시
+  // ── 대회 ──
+  "세계대회", "world championship", "챔피언십",
+  // ── 금지/제한 ──
+  "ban list", "금지 카드", "제한 카드",
+  // ── 세트 코드 ──
   "op-16", "op-17", "op-18", "op-19",
-  // 포켓몬 주요 세트
   "30주년", "30th anniversary",
-  // 금지/제한 (대형 이슈)
-  "ban list", "금지 카드", "제한 카드", "禁止カード",
-  // 신규 TCG 발표 (나루토 같은 굵직한 소식)
-  "naruto card game", "나루토 카드게임",
-  "new card game", "신규 tcg 발표",
-  "bushiroad", "부시로드",
+  // ── 신규 TCG ──
+  "naruto card", "나루토 카드",
+  "new tcg", "new card game", "부시로드", "bushiroad",
 ];
 
 export function isImportantArticle(article: TelegramArticle, force = false): boolean {

@@ -10,6 +10,39 @@ export interface TranslateResult {
   publishedAt?: Date;
 }
 
+/** 한국어 기사 요약 생성 (번역 없이 summary + tags만) */
+export async function summarizeKoreanArticle(
+  title: string,
+  content: string,
+): Promise<{ summary: string; tags: string }> {
+  const shortContent = content.slice(0, 1500);
+  try {
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 500,
+      messages: [{
+        role: "user",
+        content: `다음 한국어 TCG 뉴스 기사의 핵심을 정리하세요. JSON만 출력.
+
+제목: ${title}
+내용: ${shortContent}
+
+규칙:
+- summary: 핵심 사실 2~3개를 "· 사실1\n· 사실2" 형식으로
+- tags: 핵심 키워드 3~4개 (쉼표 구분)
+
+{"summary":"· 핵심1\n· 핵심2","tags":"태그1,태그2,태그3"}`,
+      }],
+    });
+    const text = message.content[0].type === "text" ? message.content[0].text : "{}";
+    const match = text.match(/\{[\s\S]*\}/);
+    const json = JSON.parse(match?.[0] ?? "{}");
+    return { summary: json.summary ?? "", tags: json.tags ?? "" };
+  } catch {
+    return { summary: "", tags: "" };
+  }
+}
+
 export async function translateArticle(
   title: string,
   content: string,

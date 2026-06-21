@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
         : new Date(Date.now() - 1000 * 60 * 60 * 3);
 
       const recent = await prisma.article.findMany({
-        where: { isPublished: true, createdAt: { gte: since } },
+        where: {
+          isPublished: true,
+          createdAt: { gte: since },
+          // 이미 보낸 기사는 제외 (test 모드에서는 무시)
+          ...(test ? {} : { telegramSent: false }),
+        },
         orderBy: { createdAt: "desc" },
         take: 100,
         select: { id: true, title: true, summary: true, content: true, category: true, source: true, sourceUrl: true, imageUrl: true, tags: true },
@@ -44,7 +49,6 @@ export async function GET(req: NextRequest) {
       const pokemon = important.filter(a => a.category === "pokemon").slice(0, perMain);
       const onepiece = important.filter(a => a.category === "onepiece").slice(0, perMain);
       const general  = important.filter(a => a.category === "general").slice(0, perMain);
-      // 부족한 슬롯은 다른 카테고리로 채움
       const picked = new Set([...pokemon, ...onepiece, ...general]);
       const extra = important.filter(a => !picked.has(a)).slice(0, Math.max(0, limit - picked.size));
       const candidates = [...pokemon, ...onepiece, ...general, ...extra].slice(0, limit);
@@ -52,7 +56,13 @@ export async function GET(req: NextRequest) {
       let notified = 0;
       for (const article of candidates) {
         const sent = await notifyImportantArticle(article, test);
-        if (sent) notified++;
+        if (sent) {
+          notified++;
+          // 발송 완료 표시 — 다음 cron에서 중복 발송 방지
+          if (!test) {
+            await prisma.article.update({ where: { id: article.id }, data: { telegramSent: true } });
+          }
+        }
       }
 
       return NextResponse.json({
