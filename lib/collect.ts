@@ -3,7 +3,6 @@ import { NEWS_SOURCES, type RssSource, type ScrapeSource } from "./sources/confi
 import { fetchRss, type FetchedItem } from "./sources/rss";
 import { fetchScrape } from "./sources/scrape";
 import { translateArticle } from "./translate";
-import { notifyImportantArticle } from "./telegram";
 import { findPokemonCardImage } from "./cards/article-image";
 
 export interface CollectResult {
@@ -126,16 +125,6 @@ async function processItem(item: FetchedItem): Promise<"saved" | "skipped" | "er
       publishedAt,
     },
   });
-
-  // 중요 기사 텔레그램 알림 (비동기)
-  notifyImportantArticle({
-    id: saved.id, title, summary, content,
-    category: item.category,
-    source: item.source,
-    sourceUrl: item.url || null,
-    imageUrl,
-    tags: tags || null,
-  }).catch(() => {});
 
   return "saved";
 }

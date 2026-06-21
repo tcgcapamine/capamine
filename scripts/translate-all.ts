@@ -18,9 +18,18 @@ async function main() {
             { source: { contains: "(EN)" } },
             { source: { contains: "(JA)" } },
             { source: { contains: "Dexerto" } },
+            { source: { contains: "Official" } },
           ],
         },
-        { OR: [{ summary: null }, { summary: "" }] },
+        // 미번역: summary 없음 / 빈 값 / 실패 표시 / 원문 그대로
+        {
+          OR: [
+            { summary: null },
+            { summary: "" },
+            { summary: "-" },
+            { summary: "번역 실패 — 원문 참조" },
+          ],
+        },
       ],
     },
     orderBy: { createdAt: "desc" },

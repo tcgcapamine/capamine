@@ -68,29 +68,23 @@ function getCatLabel(category: string) {
   return "TCG NEWS";
 }
 
-/** 중요 기사 판단 */
+/** 중요 기사 판단 — 진짜 중요한 것만 (너무 넓은 키워드는 스팸 원인) */
 const IMPORTANT_KEYWORDS = [
-  // 공통
-  "새로운", "신카드", "공개", "발매", "출시", "공식 발표", "신규",
-  "new set", "reveal", "official", "release", "expansion", "announced",
-  "新弾", "新カード", "公式", "発売",
-  "최고가", "신고가", "폭등", "폭락",
-  "세계대회", "챔피언십", "우승", "world championship",
-  // 포켓몬 TCG
-  "sar", "ur", "secret", "special illustration",
-  "30주년", "30th",
-  // 원피스 TCG
-  "op-16", "op-17", "op-18", "sec 카드", "sp 카드",
-  "리더 카드", "돈 카드", "새 탄", "신탄",
-  "정상결전", "새 세트", "원피스 카드 공식",
-  "leaders", "don!!", "booster pack",
-  // General TCG (나루토, 유희왕, 드래곤볼, 디지몬, MTG)
-  "naruto card", "나루토 카드", "ナルトカード",
-  "yu-gi-oh", "유희왕", "遊戯王", "master duel", "ban list",
-  "dragon ball", "드래곤볼",
-  "digimon card", "디지몬 카드",
-  "magic the gathering", "mtg", "매직 더 게더링",
-  "새로운 tcg", "신규 tcg", "new tcg", "card game announced",
+  // 가격 이상 (최우선)
+  "최고가", "신고가", "폭등", "폭락", "역대 최고",
+  // 대회 결과
+  "세계대회", "월드챔피언십", "world championship", "챔피언십 우승",
+  // 포켓몬 고희귀 카드
+  "special illustration rare", "sar", "hyper rare",
+  // 원피스 세트 출시
+  "op-16", "op-17", "op-18", "op-19",
+  // 포켓몬 주요 세트
+  "30주년", "30th anniversary",
+  // 금지/제한 (대형 이슈)
+  "ban list", "금지 카드", "제한 카드", "禁止カード",
+  // 신규 TCG 발표 (나루토 같은 굵직한 소식)
+  "naruto card game", "나루토 카드게임",
+  "new card game", "신규 tcg 발표",
   "bushiroad", "부시로드",
 ];
 
