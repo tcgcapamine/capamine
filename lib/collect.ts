@@ -163,9 +163,14 @@ export async function collectAll(categories?: string[]): Promise<CollectSummary>
     ? NEWS_SOURCES.filter((s) => categories.includes(s.category))
     : NEWS_SOURCES;
 
-  // 소스별 RSS 패치를 병렬 실행 (기사 처리는 소스 내에서 순차)
-  // 순차 실행 시 29소스 × ~500ms = ~15s → 병렬 시 ~2s
-  const results = await Promise.all(sources.map(src => collectSource(src)));
+  // 5개씩 배치 병렬 실행 — 전체 병렬은 Neon 연결 풀 초과 위험
+  const results: CollectResult[] = [];
+  const BATCH = 5;
+  for (let i = 0; i < sources.length; i += BATCH) {
+    const batch = sources.slice(i, i + BATCH);
+    const batchResults = await Promise.all(batch.map(src => collectSource(src)));
+    results.push(...batchResults);
+  }
 
   return {
     results,
