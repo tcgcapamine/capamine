@@ -12,9 +12,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const summary = await collectAll();
+    const category = req.nextUrl.searchParams.get("category");
+    const categories = category ? [category] : undefined;
+    const summary = await collectAll(categories);
     return NextResponse.json({
       ok: true,
+      category: category ?? "all",
       timestamp: new Date().toISOString(),
       saved: summary.totalSaved,
       durationMs: summary.durationMs,
